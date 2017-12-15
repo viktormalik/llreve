@@ -333,6 +333,11 @@ SExprRef TypeCast::toSExpr() const {
         case llvm::Instruction::ZExt:
         case llvm::Instruction::Trunc:
         case llvm::Instruction::BitCast:
+            if (destType.getTag() == TypeTag::Bool) {
+                args.push_back(ConstantInt(
+                        llvm::APInt(sourceType.unsafeBitWidth(), 0)).toSExpr());
+                return std::make_unique<Apply>("distinct", std::move(args));
+            }
             return operand->toSExpr();
         case llvm::Instruction::SIToFP:
             return std::make_unique<Apply>("to_real", std::move(args));
