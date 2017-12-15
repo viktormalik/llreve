@@ -82,9 +82,13 @@ void runFunctionPasses(
     llvm::Module &module, PreprocessOpts opts,
     std::map<const llvm::Function *, PassAnalysisResults> &passResults,
     Program prog) {
+    auto Main = prog == Program::First
+                ? SMTGenerationOpts::getInstance().MainFunctions.first
+                : SMTGenerationOpts::getInstance().MainFunctions.second;
     for (auto &f : module) {
-        if (!f.isIntrinsic() && !isLlreveIntrinsic(f)) {
-            if (hasFixedAbstraction(f)) {
+        if (!isLlreveIntrinsic(f) && !isIntrinsicSupported(f)) {
+            if (hasFixedAbstraction(f) ||
+                !(Main == &f || callsTransitively(*Main, f))) {
                 nameFunctionArguments(f, prog);
             } else {
                 passResults.insert({&f, runFunctionPasses(f, prog, opts)});
@@ -160,9 +164,13 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
 void runAnalyses(const llvm::Module &module, Program prog,
                  map<const llvm::Function *, PassAnalysisResults> &passResults,
                  AnalysisResultsMap &analysisResults) {
+    auto Main = prog == Program::First
+                ? SMTGenerationOpts::getInstance().MainFunctions.first
+                : SMTGenerationOpts::getInstance().MainFunctions.second;
     for (auto &f : module) {
         if (!f.isIntrinsic() && !isLlreveIntrinsic(f)) {
-            if (!hasFixedAbstraction(f)) {
+            if (!hasFixedAbstraction(f) &&
+                (Main == &f || callsTransitively(*Main, f))) {
                 analysisResults.insert({&f, runAnalyses(f, prog, passResults)});
             }
         }
