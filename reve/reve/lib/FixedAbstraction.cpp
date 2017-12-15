@@ -60,6 +60,15 @@ void externDeclarations(const llvm::Module &mod1, const llvm::Module &mod2,
     for (const auto &functionPair :
          SMTGenerationOpts::getInstance().CoupledFunctions) {
         if (hasMutualFixedAbstraction(functionPair)) {
+            auto isCalledFromMain =
+                    callsTransitively(
+                        *SMTGenerationOpts::getInstance().MainFunctions.first,
+                        *functionPair.first) &&
+                    callsTransitively(
+                        *SMTGenerationOpts::getInstance().MainFunctions.second,
+                        *functionPair.second);
+            if (!isCalledFromMain) continue;
+
             if (SMTGenerationOpts::getInstance().DisableAutoAbstraction) {
                 const auto assumeEquivalent =
                     SMTGenerationOpts::getInstance().AssumeEquivalent;
