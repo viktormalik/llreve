@@ -96,7 +96,8 @@ void externDeclarations(const llvm::Module &mod1, const llvm::Module &mod2,
         }
     }
     for (auto &fun1 : mod1) {
-        if (hasFixedAbstraction(fun1) && !isLlreveIntrinsic(fun1)) {
+        if (hasFixedAbstraction(fun1) && !isLlreveIntrinsic(fun1) &&
+            !isIntrinsicSupported(fun1)) {
             auto decls = externFunDecl(fun1, Program::First);
             declarations.insert(declarations.end(),
                                 std::make_move_iterator(decls.begin()),
@@ -104,7 +105,8 @@ void externDeclarations(const llvm::Module &mod1, const llvm::Module &mod2,
         }
     }
     for (auto &fun2 : mod2) {
-        if (hasFixedAbstraction(fun2) && !isLlreveIntrinsic(fun2)) {
+        if (hasFixedAbstraction(fun2) && !isLlreveIntrinsic(fun2) &&
+            !isIntrinsicSupported(fun2)) {
             auto decls = externFunDecl(fun2, Program::Second);
             declarations.insert(declarations.end(),
                                 std::make_move_iterator(decls.begin()),
