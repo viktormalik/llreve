@@ -245,7 +245,9 @@ auto calledFunctions(const llvm::Function &f) -> set<const llvm::Function *> {
     for (const auto &bb : f) {
         for (const auto &instr : bb) {
             if (auto call = llvm::dyn_cast<llvm::CallInst>(&instr)) {
-                called.insert(call->getCalledFunction());
+                auto fun = call->getCalledFunction();
+                if (fun)
+                    called.insert(fun);
             }
         }
     }
