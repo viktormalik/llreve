@@ -20,6 +20,7 @@
 #include "llvm/Support/ManagedStatic.h"
 
 #include "llvm/Transforms/IPO.h"
+#include "llvm/IRReader/IRReader.h"
 
 using clang::CodeGenAction;
 
@@ -174,6 +175,10 @@ static llreve::cl::opt<bool>
 static llreve::cl::opt<bool> InlineLets("inline-lets",
                                         llreve::cl::desc("Inline lets"),
                                         llreve::cl::cat(ReveCategory));
+static llreve::cl::opt<bool>
+    IrInputFlag("ir-input",
+                llreve::cl::desc("Provided input files are already in LLVM IR"),
+                llreve::cl::cat(ReveCategory));
 
 static void printVersion() {
     std::cout << "llreve version " << g_GIT_SHA1 << "\n";
@@ -200,12 +205,20 @@ int main(int argc, const char **argv) {
     SerializeOpts serializeOpts(OutputFileNameFlag, DontInstantiate,
                                 BitVectFlag, true, InlineLets);
 
+    llvm::SMDiagnostic err;
+    llvm::LLVMContext context;
     std::unique_ptr<CodeGenAction> act1 =
         std::make_unique<clang::EmitLLVMOnlyAction>();
     std::unique_ptr<CodeGenAction> act2 =
         std::make_unique<clang::EmitLLVMOnlyAction>();
+
     MonoPair<unique_ptr<llvm::Module>> modules =
-        compileToModules(argv[0], inputOpts, {*act1, *act2});
+            IrInputFlag
+            ? MonoPair<unique_ptr<llvm::Module>>(
+                  {llvm::parseIRFile(inputOpts.FileNames.first, err, context),
+                   llvm::parseIRFile(inputOpts.FileNames.second, err, context)})
+            : compileToModules(argv[0], inputOpts, {*act1, *act2});
+
     MonoPair<llvm::Module &> moduleRefs = {*modules.first, *modules.second};
 
     std::map<const llvm::Function *, int> functionNumerals;
