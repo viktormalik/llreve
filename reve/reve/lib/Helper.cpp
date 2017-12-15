@@ -81,6 +81,10 @@ SMTRef instrNameOrVal(const llvm::Value *val, const llvm::Type *ty) {
 }
 
 int typeSize(llvm::Type *Ty, const llvm::DataLayout &layout) {
+    if (auto StructTy = llvm::dyn_cast<llvm::StructType>(Ty)) {
+        if (StructTy->isOpaque())
+            return 1;
+    }
     if (SMTGenerationOpts::getInstance().ByteHeap == ByteHeapOpt::Enabled) {
         return static_cast<int>(layout.getTypeAllocSize(Ty));
     }
