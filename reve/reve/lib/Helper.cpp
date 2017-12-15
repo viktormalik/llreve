@@ -26,6 +26,9 @@ using namespace smt;
 using namespace llreve::opts;
 
 SMTRef instrLocation(const llvm::Value *val) {
+    if (const auto ConstVal = llvm::dyn_cast<llvm::Constant>(val)) {
+        return std::make_unique<ConstantBool>(true);
+    }
     if (!val->getName().empty()) {
         return stringExpr(string(val->getName()) + "_OnStack");
     }
