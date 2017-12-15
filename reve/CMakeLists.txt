@@ -88,4 +88,4 @@ enable_testing()
 
 add_subdirectory(version)
 add_subdirectory(reve)
-add_subdirectory(dynamic/llreve-dynamic)
+#add_subdirectory(dynamic/llreve-dynamic)
