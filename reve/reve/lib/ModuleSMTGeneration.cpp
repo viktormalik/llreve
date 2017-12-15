@@ -246,6 +246,17 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
                                     makeOp("-", std::to_string(globalPointer)));
             declarations.push_back(std::move(constDef1));
             declarations.push_back(std::move(constDef2));
+
+           if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled) {
+               auto constStackDef1 = make_unique<FunDef>(
+                       globalName + "_OnStack", empty, boolType(),
+                       make_unique<ConstantBool>(true));
+               auto constStackDef2 = make_unique<FunDef>(
+                       otherGlobalName + "_OnStack", empty, boolType(),
+                       make_unique<ConstantBool>(true));
+               declarations.push_back(std::move(constStackDef1));
+               declarations.push_back(std::move(constStackDef2));
+           }
         }
     }
     auto decls1 = globalDeclarationsForMod(globalPointer, mod1, mod2, 1);
