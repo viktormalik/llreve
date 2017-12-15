@@ -256,12 +256,18 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
                 makeAssignment(loadInst->getName(), std::move(load)));
         } else {
             if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled) {
+                llvm::SmallVector<unique_ptr<Assignment>, 1> result;
                 SMTRef load =
                     makeOp("select_", memoryVariable(heapName(progIndex)),
                            memoryVariable(stackName(progIndex)), pointer,
                            instrLocation(loadInst->getPointerOperand()));
-                return vecSingleton(
-                    makeAssignment(loadInst->getName(), std::move(load)));
+                result.push_back(makeAssignment(loadInst->getName(),
+                                                std::move(load)));
+
+                result.push_back(makeAssignment(
+                    string(loadInst->getName()) + "_OnStack",
+                    instrLocation(loadInst->getPointerOperand())));
+                return result;
             } else {
                 SMTRef load = makeOp(
                     "select", memoryVariable(heapName(progIndex)), pointer);
