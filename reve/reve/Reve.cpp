@@ -21,6 +21,7 @@
 
 #include "llvm/Transforms/IPO.h"
 #include "llvm/IRReader/IRReader.h"
+#include "ModuleSimplifier.h"
 
 using clang::CodeGenAction;
 
@@ -226,6 +227,10 @@ int main(int argc, const char **argv) {
         {}, {}};
     std::tie(functionNumerals, reversedFunctionNumerals) =
         generateFunctionMap(moduleRefs);
+
+    ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second);
+    modSimplifier.simplifyModules();
+
     SMTGenerationOpts::initialize(
         findMainFunction(moduleRefs, MainFunctionFlag),
         HeapFlag ? HeapOpt::Enabled : HeapOpt::Disabled,
