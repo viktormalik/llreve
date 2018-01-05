@@ -85,6 +85,8 @@ protected:
     llvm::Module &First;
     llvm::Module &Second;
 
+    void runIndependentPasses(llvm::Module &Module);
+
     void unifyFunctionAbstractions(
             FunctionAbstractionsGenerator::FunMap &FirstMap,
             FunctionAbstractionsGenerator::FunMap &SecondMap);

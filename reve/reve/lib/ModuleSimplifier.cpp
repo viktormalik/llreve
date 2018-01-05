@@ -138,16 +138,8 @@ const std::string typeToStr(const llvm::Type *Type) {
 }
 
 void ModuleSimplifier::simplifyModules() {
-    llvm::FunctionPassManager fpm(false);
-    llvm::FunctionAnalysisManager fam(false);
-    llvm::PassBuilder pb;
-    pb.registerFunctionAnalyses(fam);
-    fpm.addPass(IndependentSimplifyPass {});
-    fpm.addPass(llvm::DCEPass {});
-    for (auto &Fun : First)
-        fpm.run(Fun, fam);
-    for (auto &Fun : Second)
-        fpm.run(Fun, fam);
+    runIndependentPasses(First);
+    runIndependentPasses(Second);
 
     llvm::ModuleAnalysisManager mam(false);
     mam.registerPass([] { return FunctionAbstractionsGenerator (); });
@@ -209,6 +201,18 @@ bool ModuleSimplifier::trySwap(FunctionAbstractionsGenerator::FunMap &Map,
         }
     }
     return false;
+}
+
+void ModuleSimplifier::runIndependentPasses(llvm::Module &Module) {
+    llvm::FunctionPassManager fpm(false);
+    llvm::FunctionAnalysisManager fam(false);
+    llvm::PassBuilder pb;
+    pb.registerFunctionAnalyses(fam);
+    // Register and run independent pass
+    fpm.addPass(IndependentSimplifyPass {});
+    fpm.addPass(llvm::DCEPass {});
+    for (auto &Fun : Module)
+        fpm.run(Fun, fam);
 }
 
 uint64_t DifferentialGlobalNumberState::getNumber(llvm::GlobalValue *value) {
