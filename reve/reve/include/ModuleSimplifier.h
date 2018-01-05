@@ -92,8 +92,8 @@ protected:
             FunctionAbstractionsGenerator::FunMap &SecondMap);
 
     bool trySwap(FunctionAbstractionsGenerator::FunMap &Map,
-                 const llvm::StringRef &srcHash,
-                 const llvm::StringRef &destName);
+                 const std::string srcHash,
+                 const std::string destName);
 };
 
 const std::string typeToStr(const llvm::Type *Type);

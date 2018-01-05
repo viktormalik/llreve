@@ -142,7 +142,7 @@ void ModuleSimplifier::simplifyModules() {
     runIndependentPasses(Second);
 
     llvm::ModuleAnalysisManager mam(false);
-    mam.registerPass([] { return FunctionAbstractionsGenerator (); });
+    mam.registerPass([] { return FunctionAbstractionsGenerator(); });
 
     unifyFunctionAbstractions(
             mam.getResult<FunctionAbstractionsGenerator>(First),
@@ -158,6 +158,10 @@ void ModuleSimplifier::simplifyModules() {
         DifferentialGlobalNumberState gs(&First, &Second);
         llvm::FunctionComparator fComp(&FunFirst, FunSecond, &gs);
         if (fComp.compare() == 0) {
+#ifdef DEBUG
+            llvm::errs() << "Function " << FunFirst.getName()
+                         << " is same in both modules\n";
+#endif
             FunFirst.deleteBody();
             FunSecond->deleteBody();
         }
@@ -190,13 +194,12 @@ void ModuleSimplifier::unifyFunctionAbstractions(
 }
 
 bool ModuleSimplifier::trySwap(FunctionAbstractionsGenerator::FunMap &Map,
-                               const llvm::StringRef &srcHash,
-                               const llvm::StringRef &destName) {
+                               const std::string srcHash,
+                               const std::string destName) {
     for (auto &Fun : Map) {
         if (Fun.second->getName() == destName) {
-            auto tmp = Fun.second->getName();
             Fun.second->setName(Map.find(srcHash)->second->getName());
-            Map.find(srcHash)->second->setName(tmp);
+            Map.find(srcHash)->second->setName(destName);
             return true;
         }
     }
