@@ -207,7 +207,8 @@ int main(int argc, const char **argv) {
                                 BitVectFlag, true, InlineLets);
 
     llvm::SMDiagnostic err;
-    llvm::LLVMContext context;
+    llvm::LLVMContext context_first;
+    llvm::LLVMContext context_second;
     std::unique_ptr<CodeGenAction> act1 =
         std::make_unique<clang::EmitLLVMOnlyAction>();
     std::unique_ptr<CodeGenAction> act2 =
@@ -216,8 +217,10 @@ int main(int argc, const char **argv) {
     MonoPair<unique_ptr<llvm::Module>> modules =
             IrInputFlag
             ? MonoPair<unique_ptr<llvm::Module>>(
-                  {llvm::parseIRFile(inputOpts.FileNames.first, err, context),
-                   llvm::parseIRFile(inputOpts.FileNames.second, err, context)})
+                    {llvm::parseIRFile(inputOpts.FileNames.first, err,
+                                       context_first),
+                     llvm::parseIRFile(inputOpts.FileNames.second, err,
+                                       context_second)})
             : compileToModules(argv[0], inputOpts, {*act1, *act2});
 
     MonoPair<llvm::Module &> moduleRefs = {*modules.first, *modules.second};
