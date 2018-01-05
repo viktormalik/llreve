@@ -75,6 +75,8 @@ Type llvmType(const llvm::Type *type) {
     } else if (type->isVoidTy()) {
         // Void is always a constant zero
         return int64Type();
+    } else if (type->isStructTy()) {
+        return pointerType();
     } else {
         logErrorData("Unsupported type\n", *type);
         exit(1);
