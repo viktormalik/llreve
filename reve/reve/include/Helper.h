@@ -25,6 +25,8 @@ auto instrNameOrVal(const llvm::Value *val) -> std::unique_ptr<smt::SMTExpr>;
 auto instrNameOrVal(const llvm::Value *val, const llvm::Type *ty)
     -> std::unique_ptr<smt::SMTExpr>;
 auto typeSize(llvm::Type *ty, const llvm::DataLayout &layout) -> int;
+auto globalType(const llvm::GlobalVariable &global) -> llvm::Type *;
+auto globalSize(const llvm::GlobalVariable &global) -> int;
 template <typename T> std::unique_ptr<smt::SMTExpr> resolveGEP(T &gep) {
     std::vector<smt::SharedSMTRef> args;
     args.push_back(instrNameOrVal(gep.getPointerOperand()));

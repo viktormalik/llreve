@@ -265,3 +265,17 @@ auto dropSuffixFromName(string name) -> string {
     }
     return name;
 }
+
+llvm::Type *globalType(const llvm::GlobalVariable &global) {
+    if (const auto pointerTy =
+            llvm::dyn_cast<llvm::PointerType>(global.getType())) {
+        return pointerTy->getElementType();
+    } else {
+        return global.getType();
+    }
+}
+
+int globalSize(const llvm::GlobalVariable &global) {
+    auto mod = global.getParent();
+    return typeSize(globalType(global), mod->getDataLayout());
+}

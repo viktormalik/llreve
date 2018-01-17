@@ -51,6 +51,17 @@ auto outInvariant(MonoPair<std::vector<smt::SortedVar>> funArgs,
                   smt::SharedSMTRef body, const llvm::Type *type)
     -> std::unique_ptr<smt::FunDef>;
 
+auto heapEquality(std::vector<MonoPair<const llvm::GlobalVariable &>> &)
+    -> std::unique_ptr<smt::FunDef>;
+
+void addHeapSelectEquality(std::string largerHeapName,
+                           const llvm::Value *largerPointer,
+                           int largerSize,
+                           std::string smallerHeapName,
+                           const llvm::Value *smallerPointer,
+                           int smallerSize,
+                           std::vector<smt::SharedSMTRef> &equalities);
+
 smt::SMTRef initPredicate(const smt::FunDef &inInv);
 smt::SMTRef initPredicateComment(const smt::FunDef &inInv);
 smt::SMTRef initImplication(const smt::FunDef &funDecl);

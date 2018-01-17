@@ -551,6 +551,9 @@ bool isArray(const Type &type);
 std::unique_ptr<SMTExpr> memoryVariable(std::string name);
 std::unique_ptr<TypedVariable> typedVariableFromSortedVar(const SortedVar &var);
 SortedVar sortedVarFromTypedVariable(const TypedVariable &var);
+std::unique_ptr<Op> memorySelect(std::string heapName,
+                                 const SharedSMTRef pointer,
+                                 int bytes);
 }
 void setSMTLexerInput(const char *input);
 smt::SharedSMTRef parseSMT(const std::string &input);

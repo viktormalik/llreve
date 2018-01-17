@@ -56,15 +56,23 @@ SExprRef ConstantFP::toSExpr() const {
 
 SExprRef ConstantInt::toSExpr() const {
     if (SMTGenerationOpts::getInstance().BitVect) {
-        unsigned bitWidth = value.getBitWidth();
+        auto val = value;
+        if (value.isNegative())
+            val = -value;
+        unsigned bitWidth = val.getBitWidth();
         unsigned hexWidth = bitWidth / 4;
-        string hexValue = value.toString(16, false);
+        string hexValue = val.toString(16, false);
         unsigned unpaddedHexWidth = hexValue.size();
         // Pad the string with 0s
         for (int i = 0; i < hexWidth - unpaddedHexWidth; ++i) {
             hexValue = '0' + hexValue;
         }
         assert(bitWidth == 4 * hexValue.size());
+        if (value.isNegative()) {
+            SExprVec args;
+            args.push_back(sexprFromString("#x" + hexValue));
+            return std::make_unique<Apply>("bvneg", std::move(args));
+        }
         return sexprFromString("#x" + hexValue);
     } else {
         if (value.isNegative()) {
@@ -296,6 +304,14 @@ SExprRef TypeCast::toSExpr() const {
             std::make_unique<ConstantInt>(llvm::APInt(destBitWidth, 0))};
         return Op("ite", std::move(args)).toSExpr();
     }
+    // Cast to boolean is an SMT type conversion, we deal with it separately
+    if (destType.getTag() == TypeTag::Bool) {
+        SExprVec args;
+        args.push_back(operand->toSExpr());
+        args.push_back(ConstantInt(
+                llvm::APInt(sourceType.unsafeBitWidth(), 0)).toSExpr());
+        return std::make_unique<Apply>("distinct", std::move(args));
+    }
     if (SMTGenerationOpts::getInstance().BitVect) {
         SExprVec args;
         args.push_back(operand->toSExpr());
@@ -320,6 +336,15 @@ SExprRef TypeCast::toSExpr() const {
                             std::to_string(destBitWidth - sourceBitWidth) + ")";
             return std::make_unique<Apply>(opName, std::move(args));
         }
+        case llvm::Instruction::BitCast: {
+            if (destType.getTag() == sourceType.getTag())
+                return operand->toSExpr();
+            else {
+                logError("Unsupported bit cast: " +
+                         std::to_string(this->op) + "\n");
+                exit(1);
+            }
+        }
         default:
             logError("Unsupported cast operation in bitvector mode: " +
                      std::to_string(this->op) + "\n");
@@ -333,11 +358,6 @@ SExprRef TypeCast::toSExpr() const {
         case llvm::Instruction::ZExt:
         case llvm::Instruction::Trunc:
         case llvm::Instruction::BitCast:
-            if (destType.getTag() == TypeTag::Bool) {
-                args.push_back(ConstantInt(
-                        llvm::APInt(sourceType.unsafeBitWidth(), 0)).toSExpr());
-                return std::make_unique<Apply>("distinct", std::move(args));
-            }
             return operand->toSExpr();
         case llvm::Instruction::SIToFP:
             return std::make_unique<Apply>("to_real", std::move(args));
@@ -875,6 +895,22 @@ unique_ptr<TypedVariable> typedVariableFromSortedVar(const SortedVar &var) {
 
 SortedVar sortedVarFromTypedVariable(const TypedVariable &var) {
     return {var.name, var.type};
+}
+
+std::unique_ptr<Op> memorySelect(string heapName,
+                                 const SharedSMTRef pointer,
+                                 int bytes) {
+    auto load =
+            makeOp("select", heapName, pointer);
+    for (unsigned i = 1; i < bytes; ++i) {
+        load =
+                makeOp("concat", std::move(load),
+                       makeOp("select", memoryVariable(heapName),
+                              makeOp("bvadd", pointer,
+                                     std::make_unique<ConstantInt>(
+                                             llvm::APInt(64, i)))));
+    }
+    return std::move(load);
 }
 
 shared_ptr<SMTExpr> SetLogic::accept(SMTVisitor &visitor) const {

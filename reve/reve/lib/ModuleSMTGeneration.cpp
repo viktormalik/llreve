@@ -170,7 +170,7 @@ SMTRef select_Declaration() {
                               {"stack", memoryType()},
                               {"pointer", int64Type()},
                               {"onStack", boolType()}};
-    return make_unique<FunDef>("select_", std::move(args), int64Type(), body);
+    return make_unique<FunDef>("select_", std::move(args), IntType(8), body);
 }
 
 SMTRef store_Declaration() {
@@ -181,7 +181,7 @@ SMTRef store_Declaration() {
                               {"stack", memoryType()},
                               {"pointer", int64Type()},
                               {"onStack", boolType()},
-                              {"val", int64Type()}};
+                              {"val", IntType(8)}};
     return make_unique<FunDef>("store_", std::move(args), memoryType(), body);
 }
 
@@ -207,9 +207,10 @@ vector<SharedSMTRef> globalDeclarationsForMod(int globalPointer,
                     typeSize(global1.getType(), mod.getDataLayout());
             }
             std::vector<SortedVar> empty;
-            auto constDef1 =
-                make_unique<FunDef>(globalName, empty, int64Type(),
-                                    makeOp("-", std::to_string(globalPointer)));
+            auto constDef1 = make_unique<FunDef>(
+                    globalName, empty, int64Type(),
+                    std::make_unique<ConstantInt>(
+                            llvm::APInt(64, -globalPointer, true)));
             declarations.push_back(std::move(constDef1));
         }
     }
@@ -221,29 +222,37 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     // First match globals with the same name to make sure that they get the
     // same pointer, then match globals that only exist in one module
     std::vector<SharedSMTRef> declarations;
+    std::vector<MonoPair<const llvm::GlobalVariable &>> resizedGlobals;
     int globalPointer = 1;
     for (auto &global1 : mod1.globals()) {
         std::string globalName = global1.getName();
         std::string otherGlobalName = dropSuffixFromName(globalName) + "$2";
-        if (mod2.getNamedGlobal(otherGlobalName)) {
+        if (auto global2 = mod2.getNamedGlobal(otherGlobalName)) {
             // we want the size of string constants not the size of the
             // pointer
             // pointing to them
-            if (const auto pointerTy =
-                    llvm::dyn_cast<llvm::PointerType>(global1.getType())) {
-                globalPointer +=
-                    typeSize(pointerTy->getElementType(), mod1.getDataLayout());
-            } else {
-                globalPointer +=
-                    typeSize(global1.getType(), mod1.getDataLayout());
+            int global1Size = globalSize(global1);
+            int global2Size = globalSize(*global2);
+            if (global1Size >= global2Size)
+                globalPointer += global1Size;
+            else
+                globalPointer += global2Size;
+            if (global1Size != global2Size &&
+                globalType(global1)->isIntegerTy() &&
+                globalType(*global2)->isIntegerTy()) {
+                resizedGlobals.push_back({global1, *global2});
             }
+
             std::vector<SortedVar> empty;
-            auto constDef1 =
-                make_unique<FunDef>(globalName, empty, int64Type(),
-                                    makeOp("-", std::to_string(globalPointer)));
-            auto constDef2 =
-                make_unique<FunDef>(otherGlobalName, empty, int64Type(),
-                                    makeOp("-", std::to_string(globalPointer)));
+            auto constDef1 = make_unique<FunDef>(
+                    globalName, empty, int64Type(),
+                    std::make_unique<ConstantInt>(
+                            llvm::APInt(64, -globalPointer, true)));
+            auto constDef2 = make_unique<FunDef>(
+                    otherGlobalName, empty, int64Type(),
+                    std::make_unique<ConstantInt>(
+                            llvm::APInt(64, -globalPointer, true)));
+
             declarations.push_back(std::move(constDef1));
             declarations.push_back(std::move(constDef2));
 
@@ -263,6 +272,11 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     auto decls2 = globalDeclarationsForMod(globalPointer, mod2, mod1, 2);
     declarations.insert(declarations.end(), decls1.begin(), decls1.end());
     declarations.insert(declarations.end(), decls2.begin(), decls2.end());
+    if (SMTGenerationOpts::getInstance().BitVect) {
+        // For bit-vectors, we need to adjust equality between corresponding
+        // global variables having different bit width in each module
+        declarations.push_back(std::move(heapEquality(resizedGlobals)));
+    }
     return declarations;
 }
 
@@ -325,6 +339,15 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
                        [](auto &arg1, auto &arg2) {
                            return makeOp("=", std::move(arg1), std::move(arg2));
                        });
+        if (SMTGenerationOpts::getInstance().BitVect) {
+            equalInputs.push_back(makeOp(
+                    "HEAP_EQ",
+                    std::make_unique<TypedVariable>(heapName(Program::First),
+                                                    memoryType()),
+                    std::make_unique<TypedVariable>(heapName(Program::Second),
+                                                    memoryType())));
+
+        }
         if (additionalIn) {
             equalInputs.push_back(body);
         }
@@ -422,4 +445,59 @@ SMTRef initImplication(const FunDef &funDecl) {
         std::make_unique<smt::Forall>(funDecl.args, std::move(clause));
 
     return make_unique<smt::Assert>(std::move(forall));
+}
+
+std::unique_ptr<FunDef> heapEquality(
+        std::vector<MonoPair<const llvm::GlobalVariable &>> &resizedGlobals) {
+    SortedVar heap1 = SortedVar(heapName(Program::First), memoryType());
+    SortedVar heap2 = SortedVar(heapName(Program::Second), memoryType());
+
+    std::vector<SharedSMTRef> equalities;
+    equalities.push_back(makeOp("=",
+                                typedVariableFromSortedVar(heap1),
+                                typedVariableFromSortedVar(heap2)));
+
+    for (auto &globals : resizedGlobals) {
+        int glob1Size = globalSize(globals.first);
+        int glob2Size = globalSize(globals.second);
+
+        if (glob1Size > glob2Size) {
+            addHeapSelectEquality(
+                    heapName(Program::First), &globals.first, glob1Size,
+                    heapName(Program::Second), &globals.second, glob2Size,
+                    equalities);
+        } else {
+            addHeapSelectEquality(
+                    heapName(Program::Second), &globals.second, glob2Size,
+                    heapName(Program::First), &globals.first, glob1Size,
+                    equalities);
+        }
+    }
+
+    auto body = resizedGlobals.empty() ? equalities.at(0)
+                                       : std::make_unique<Op>("and",
+                                                              equalities);
+
+    return std::make_unique<FunDef>("HEAP_EQ",
+                                    std::vector<SortedVar>({heap1, heap2}),
+                                    boolType(), body);
+}
+
+void addHeapSelectEquality(std::string largerHeapName,
+                           const llvm::Value *largerPointer,
+                           int largerSize,
+                           std::string smallerHeapName,
+                           const llvm::Value *smallerPointer,
+                           int smallerSize,
+                           std::vector<smt::SharedSMTRef> &equalities) {
+    auto larger = memorySelect(largerHeapName,
+                               instrNameOrVal(largerPointer),
+                               largerSize);
+    auto smaller = memorySelect(smallerHeapName,
+                                instrNameOrVal(smallerPointer),
+                                smallerSize);
+    smaller = makeOp(
+            "(_ sign_extend " + std::to_string((largerSize - smallerSize) * 8) +
+            ")", std::move(smaller));
+    equalities.push_back(makeOp("=", std::move(larger), std::move(smaller)));
 }
