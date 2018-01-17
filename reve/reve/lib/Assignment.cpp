@@ -240,6 +240,7 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
     if (const auto loadInst = llvm::dyn_cast<llvm::LoadInst>(&Instr)) {
         SharedSMTRef pointer = instrNameOrVal(loadInst->getOperand(0));
         if (SMTGenerationOpts::getInstance().BitVect) {
+            llvm::SmallVector<unique_ptr<Assignment>, 1> result;
             // We load single bytes
             unsigned bytes = loadInst->getType()->getIntegerBitWidth() / 8;
             auto load =
@@ -252,8 +253,23 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
                                          std::make_unique<ConstantInt>(
                                              llvm::APInt(64, i)))));
             }
-            return vecSingleton(
+            if (bytes == 0)
+                bytes = 1;
+            if (bytes * 8 < llvmType(loadInst->getType()).unsafeBitWidth()) {
+                load = smt::makeOp("(_ sign_extend " + std::to_string(
+                        llvmType(loadInst->getType()).unsafeBitWidth() -
+                        (bytes * 8)) + ")",
+                                   std::move(load));
+            }
+            result.push_back(
                 makeAssignment(loadInst->getName(), std::move(load)));
+            if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled &&
+                loadInst->getType()->isPointerTy()) {
+                result.push_back(makeAssignment(
+                        string(loadInst->getName()) + "_OnStack",
+                        instrLocation(loadInst->getPointerOperand())));
+            }
+            return result;
         } else {
             if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled) {
                 llvm::SmallVector<unique_ptr<Assignment>, 1> result;
@@ -318,12 +334,21 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
         }
     }
     if (const auto bitCast = llvm::dyn_cast<llvm::CastInst>(&Instr)) {
+        llvm::SmallVector<unique_ptr<Assignment>, 1> result;
+
         auto cast = std::make_unique<TypeCast>(
             bitCast->getOpcode(), llvmType(bitCast->getSrcTy()),
             llvmType(bitCast->getDestTy()),
             instrNameOrVal(bitCast->getOperand(0)));
-        return vecSingleton(
-            makeAssignment(bitCast->getName(), std::move(cast)));
+        result.push_back(makeAssignment(bitCast->getName(), std::move(cast)));
+
+        if (bitCast->getSrcTy()->isPointerTy() &&
+            bitCast->getDestTy()->isPointerTy()) {
+            result.push_back(
+                    makeAssignment(string(bitCast->getName()) + "_OnStack",
+                                   instrLocation(bitCast->getOperand(0))));
+        }
+        return result;
     }
     if (const auto allocaInst = llvm::dyn_cast<llvm::AllocaInst>(&Instr)) {
         unsigned allocatedSize =
@@ -331,8 +356,9 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
                      allocaInst->getModule()->getDataLayout());
         std::string sp = stackPointerName(progIndex);
         llvm::SmallVector<unique_ptr<Assignment>, 1> result;
+        auto subOp = SMTGenerationOpts::getInstance().BitVect ? "bvsub" : "-";
         result.push_back(makeAssignment(
-            sp, makeOp("-", sp, std::make_unique<ConstantInt>(
+            sp, makeOp(subOp, sp, std::make_unique<ConstantInt>(
                                     llvm::APInt(64, allocatedSize)))));
         result.push_back(
             makeAssignment(allocaInst->getName(),
