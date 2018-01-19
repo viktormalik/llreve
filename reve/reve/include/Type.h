@@ -5,7 +5,7 @@
 #include "llvm/IR/Type.h"
 
 namespace smt {
-enum class TypeTag { Bool, Int, Float, Array };
+enum class TypeTag { Bool, Int, Float, Array, Struct };
 
 // This is modeled via the ideas from Sean Parent’s talk “Inheritance is the
 // Base Class of Evil”. The main advantage is that we get value semantics and
@@ -82,6 +82,16 @@ struct ArrayType {
     Type target;
     explicit ArrayType(Type domain, Type target)
         : domain(std::move(domain)), target(std::move(target)) {}
+    TypeTag getTag() const;
+    sexpr::SExprRef toSExpr() const;
+    unsigned unsafeBitWidth() const {
+        assert(false && "unsafeBitWidth() can only be called on an IntType");
+        return 0;
+    }
+};
+
+struct StructType {
+    std::vector<Type> elements;
     TypeTag getTag() const;
     sexpr::SExprRef toSExpr() const;
     unsigned unsafeBitWidth() const {

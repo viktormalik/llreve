@@ -8,6 +8,7 @@
  * See LICENSE (distributed with this file) for details.
  */
 
+#include <FreeVariables.h>
 #include "Assignment.h"
 
 #include "Helper.h"
@@ -376,6 +377,15 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
             instrNameOrVal(fcmpInst->getOperand(1)));
         return vecSingleton(
             makeAssignment(fcmpInst->getName(), std::move(cmp)));
+    }
+    if (const auto extractValInst =
+            llvm::dyn_cast<llvm::ExtractValueInst>(&Instr)) {
+        auto value = instrNameOrVal(extractValInst->getAggregateOperand());
+        for (const auto &i : extractValInst->indices()) {
+            value = makeOp("elem" + std::to_string(i), std::move(value));
+        }
+        return vecSingleton(makeAssignment(extractValInst->getName(),
+                                           std::move(value)));
     }
     logErrorData("Couldn’t convert instruction to def\n", Instr);
     return vecSingleton(

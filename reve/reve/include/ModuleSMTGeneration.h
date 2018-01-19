@@ -42,6 +42,8 @@ auto globalDeclarationsForMod(int globalPointer, const llvm::Module &mod,
     -> std::vector<smt::SharedSMTRef>;
 auto stringConstants(const llvm::Module &mod, std::string heap)
     -> std::vector<smt::SharedSMTRef>;
+auto typeDeclarations(const llvm::Module &mod1, const llvm::Module &mod2)
+    -> std::vector<smt::SharedSMTRef>;
 auto inInvariant(MonoPair<const llvm::Function *> funs,
                  const AnalysisResultsMap &analysisResults,
                  smt::SharedSMTRef body, const llvm::Module &mod1,

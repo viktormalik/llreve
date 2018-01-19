@@ -225,6 +225,29 @@ SExprRef VarDecl::toSExpr() const {
     return std::make_unique<Apply>("declare-var", std::move(args));
 }
 
+SExprRef TupleTypeDecl::toSExpr() const {
+    SExprVec typesSExprs;
+    SExprVec ctorElements;
+    for (int i = 0; i < elemCnt; ++i) {
+        std::string elemTypeName = "T" + std::to_string(i);
+        SharedSMTRef type = stringExpr(elemTypeName);
+        typesSExprs.push_back(type->toSExpr());
+        ctorElements.push_back(
+                makeOp("elem" + std::to_string(i), type)->toSExpr());
+    }
+    auto ctor = std::make_unique<Apply>("mk-tuple",std::move(ctorElements));
+    SExprVec ctorArg;
+    ctorArg.push_back(std::move(ctor));
+    SExprRef typeDef = std::make_unique<Apply>(
+            "Tuple" + std::to_string(elemCnt), std::move(ctorArg));
+    SExprVec typeDefArg;
+    typeDefArg.push_back(std::move(typeDef));
+    SExprVec args;
+    args.push_back(std::make_unique<List>(std::move(typesSExprs)));
+    args.push_back(std::make_unique<List>(std::move(typeDefArg)));
+    return std::make_unique<Apply>("declare-datatypes", std::move(args));
+}
+
 SExprRef FPCmp::toSExpr() const {
     if (SMTGenerationOpts::getInstance().BitVect) {
         logError("Floating point predicates for bitvectors are not yet "
@@ -1028,6 +1051,11 @@ shared_ptr<SMTExpr> Comment::accept(SMTVisitor &visitor) const {
 }
 shared_ptr<SMTExpr> VarDecl::accept(SMTVisitor &visitor) const {
     shared_ptr<VarDecl> result{new VarDecl(*this)};
+    visitor.dispatch(*result);
+    return visitor.reassemble(*result);
+}
+shared_ptr<SMTExpr> TupleTypeDecl::accept(SMTVisitor &visitor) const {
+    shared_ptr<TupleTypeDecl> result{new TupleTypeDecl(*this)};
     visitor.dispatch(*result);
     return visitor.reassemble(*result);
 }

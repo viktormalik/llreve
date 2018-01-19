@@ -67,6 +67,7 @@ class FunDecl;
 class FunDef;
 class Comment;
 class VarDecl;
+class TupleTypeDecl;
 
 struct SMTVisitor;
 class SMTExpr : public std::enable_shared_from_this<SMTExpr> {
@@ -93,6 +94,7 @@ class SMTExpr : public std::enable_shared_from_this<SMTExpr> {
     // Needed because we compile without rtti and thereby can’t use a dynamic
     // cast to check the type
     virtual bool isConstantFalse() const { return false; }
+    virtual bool isTypeDeclaration() const {return false; }
 };
 
 using SMTRef = std::unique_ptr<SMTExpr>;
@@ -446,6 +448,17 @@ class VarDecl : public SMTExpr {
               llvm::StringMap<Z3DefineFun> &defineFunMap) const override;
 };
 
+class TupleTypeDecl : public SMTExpr {
+  public:
+    int elemCnt;
+
+    TupleTypeDecl(int elemCnt) : elemCnt(elemCnt) {}
+
+    std::shared_ptr<SMTExpr> accept(SMTVisitor &visitor) const override;
+    sexpr::SExprRef toSExpr() const override;
+    bool isTypeDeclaration() const override { return true; }
+};
+
 // This visitor first does a top-down traversal and calls 'dispatch' on each
 // expression. Then it does a bottom up traversal and calls 'reassemble' to
 // create
@@ -477,6 +490,7 @@ struct SMTVisitor {
     virtual void dispatch(FunDef &expr) {}
     virtual void dispatch(Comment &expr) {}
     virtual void dispatch(VarDecl &expr) {}
+    virtual void dispatch(TupleTypeDecl &expr) {}
     virtual std::shared_ptr<SMTExpr> reassemble(SetLogic &expr) {
         return expr.shared_from_this();
     }
@@ -535,6 +549,9 @@ struct SMTVisitor {
         return expr.shared_from_this();
     }
     virtual std::shared_ptr<SMTExpr> reassemble(VarDecl &expr) {
+        return expr.shared_from_this();
+    }
+    virtual std::shared_ptr<SMTExpr> reassemble(TupleTypeDecl &expr) {
         return expr.shared_from_this();
     }
 };

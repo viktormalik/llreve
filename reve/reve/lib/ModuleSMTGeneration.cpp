@@ -51,6 +51,9 @@ vector<SharedSMTRef> generateSMT(MonoPair<const llvm::Module &> modules,
         declarations.push_back(store_Declaration());
     }
 
+    auto typeDecls = typeDeclarations(modules.first, modules.second);
+    smtExprs.insert(smtExprs.end(), typeDecls.begin(), typeDecls.end());
+
     externDeclarations(modules.first, modules.second, declarations,
                        fileOpts.FunctionConditions);
 
@@ -301,6 +304,31 @@ vector<SharedSMTRef> stringConstants(const llvm::Module &mod, string memory) {
         }
     }
     return stringConstants;
+}
+
+void allStructTypeSizes(const llvm::Module &mod, std::set<unsigned> &sizes) {
+    for (auto &Fun : mod) {
+        for (auto &BB : Fun) {
+            for (auto &Inst : BB) {
+                if (auto StructTy = llvm::dyn_cast<llvm::StructType>(
+                        Inst.getType())) {
+                    sizes.insert(StructTy->getNumElements());
+                }
+            }
+        }
+    }
+}
+
+std::vector<smt::SharedSMTRef> typeDeclarations(const llvm::Module &mod1,
+                                                const llvm::Module &mod2) {
+    std::set<unsigned> tupleSizes;
+    allStructTypeSizes(mod1, tupleSizes);
+    allStructTypeSizes(mod2, tupleSizes);
+    std::vector<SharedSMTRef> declarations;
+    for (auto &i : tupleSizes) {
+        declarations.push_back(std::make_unique<TupleTypeDecl>(i));
+    }
+    return declarations;
 }
 
 std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,

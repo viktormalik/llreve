@@ -253,6 +253,10 @@ void serializeSMT(vector<SharedSMTRef> smtExprs, bool muZ, SerializeOpts opts) {
                 << "\n";
         vector<SharedSMTRef> letCompressedExprs;
         for (const auto &smt : smtExprs) {
+            if (smt->isTypeDeclaration()) {
+                outFile << *smt->toSExpr() << "\n";
+                continue;
+            }
             auto splitSMTs = smt->splitConjunctions();
             for (auto &expr : splitSMTs) {
                 expr = renameAssignments(*compressLets(*expr));
