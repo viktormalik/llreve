@@ -179,6 +179,15 @@ static SMTRef equalInputs(const llvm::Function &fun1,
     return make_unique<Op>("and", equal);
 }
 
+static SMTRef equalHeap() {
+    std::vector<SharedSMTRef> equal;
+    equal.push_back(makeOp("=", memoryVariable(heapName(Program::First)),
+                           memoryVariable(heapResultName(Program::First))));
+    equal.push_back(makeOp("=", memoryVariable(heapName(Program::Second)),
+                           memoryVariable(heapResultName(Program::Second))));
+    return make_unique<Op>("and", equal);
+}
+
 std::vector<std::unique_ptr<smt::SMTExpr>>
 equivalentExternDecls(const llvm::Function &fun1, const llvm::Function &fun2,
                       std::multimap<string, string> funCondMap) {
@@ -198,6 +207,11 @@ equivalentExternDecls(const llvm::Function &fun1, const llvm::Function &fun2,
         SMTRef eqOutputs = equalOutputs(fun1.getName(), funCondMap);
         SMTRef eqInputs = equalInputs(fun1, fun2, argNum);
         SMTRef body = makeOp("=>", std::move(eqInputs), std::move(eqOutputs));
+
+        if (fun1.getMetadata("is_nondet")) {
+            SMTRef eqHeap = equalHeap();
+            body = makeOp("and", std::move(body), std::move(eqHeap));
+        }
 
         auto mainInv =
             make_unique<FunDef>(funName, args, boolType(), std::move(body));
@@ -221,8 +235,14 @@ notEquivalentExternDecls(const llvm::Function &fun1,
             invariantName(ENTRY_MARK, ProgramSelection::Both,
                           fun1.getName().str() + "^" + fun2.getName().str(),
                           InvariantAttr::NONE, argNum);
+        SMTRef body;
+        if (fun1.getMetadata("is_nondet")) {
+            body = equalHeap();
+        } else {
+            body = make_unique<ConstantBool>(true);
+        }
         auto mainInv = make_unique<FunDef>(funName, args, boolType(),
-                                           make_unique<ConstantBool>(true));
+                                           std::move(body));
         declarations.push_back(std::move(mainInv));
     }
     return declarations;
@@ -246,7 +266,15 @@ externFunDecl(const llvm::Function &fun, Program program) {
         std::string funName =
             invariantName(ENTRY_MARK, asSelection(program), fun.getName().str(),
                           InvariantAttr::NONE, argNum);
-        auto body = make_unique<ConstantBool>(true);
+        SMTRef body;
+        if (fun.getMetadata("is_nondet") &&
+            SMTGenerationOpts::getInstance().Heap == HeapOpt::Enabled) {
+            body = makeOp("=",
+                          memoryVariable("HEAP"),
+                          memoryVariable(heapResultName(program)));
+        } else {
+            body = make_unique<ConstantBool>(true);
+        }
         decls.push_back(
             make_unique<FunDef>(funName, args, boolType(), std::move(body)));
     }

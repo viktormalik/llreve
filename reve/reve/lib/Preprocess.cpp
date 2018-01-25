@@ -16,6 +16,7 @@
 #include "InlinePass.h"
 #include "InstCombine.h"
 #include "MonoPair.h"
+#include "NondetRemovalPass.h"
 #include "PathAnalysis.h"
 #include "RemoveMarkPass.h"
 #include "RemoveMarkRefsPass.h"
@@ -123,6 +124,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     fpm.addPass(llvm::LoopSimplifyPass{});
     fpm.addPass(llvm::SimplifyCFGPass{});
     fpm.addPass(SplitBlockPass{});
+    fpm.addPass(NondetRemovalPass{});
 
     MarkAnalysis markAnalysis{};
     fam.registerPass([] { return InferMarksAnalysis(); });
