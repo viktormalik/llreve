@@ -70,6 +70,14 @@ vector<DefOrCallInfo> blockAssignments(const llvm::BasicBlock &BB,
                     }
                     definitions.emplace_back(
                         toCallInfo(CallInst->getName(), prog, *CallInst));
+                    if (CallInst->getMetadata("is_nondet") &&
+                        CallInst->getType()->isPointerTy()
+                        && SMTGenerationOpts::getInstance().Stack ==
+                           StackOpt::Enabled) {
+                       definitions.emplace_back(makeAssignment(
+                               string(CallInst->getName()) + "_OnStack",
+                               std::make_unique<ConstantBool>(true)));
+                    }
                     if (SMTGenerationOpts::getInstance().Heap ==
                         HeapOpt::Enabled) {
                         definitions.emplace_back(makeAssignment(
@@ -380,12 +388,20 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
     }
     if (const auto extractValInst =
             llvm::dyn_cast<llvm::ExtractValueInst>(&Instr)) {
+        llvm::SmallVector<unique_ptr<Assignment>, 1> result;
         auto value = instrNameOrVal(extractValInst->getAggregateOperand());
         for (const auto &i : extractValInst->indices()) {
             value = makeOp("elem" + std::to_string(i), std::move(value));
         }
-        return vecSingleton(makeAssignment(extractValInst->getName(),
-                                           std::move(value)));
+        result.push_back(makeAssignment(extractValInst->getName(),
+                                        std::move(value)));
+        if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled &&
+            extractValInst->getType()->isPointerTy()) {
+            result.push_back(makeAssignment(
+                    string(extractValInst->getName()) + "_OnStack",
+                    std::make_unique<ConstantBool>(true)));
+        }
+        return result;
     }
     logErrorData("Couldn’t convert instruction to def\n", Instr);
     return vecSingleton(
