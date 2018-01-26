@@ -59,7 +59,8 @@ auto predicateFun(const llvm::CmpInst &pred, smt::SMTRef) -> smt::SMTRef;
 auto fpPredicate(const llvm::CmpInst::Predicate pred) -> smt::FPCmp::Predicate;
 auto binaryFPOpcode(const llvm::Instruction::BinaryOps op)
     -> smt::BinaryFPOperator::Opcode;
-auto opName(const llvm::BinaryOperator &op) -> std::string;
+auto opName(const llvm::BinaryOperator &op, const llvm::Type &Type)
+    -> std::string;
 auto combineOp(const llvm::BinaryOperator &op, std::string opName,
                smt::SMTRef firstArg, smt::SMTRef secondArg) -> smt::SMTRef;
 auto memcpyIntrinsic(const llvm::CallInst *callInst, Program prog)

@@ -173,7 +173,8 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
             }
         }
         return vecSingleton(makeAssignment(
-            BinOp->getName(), combineOp(*BinOp, opName(*BinOp),
+            BinOp->getName(), combineOp(*BinOp,
+                                        opName(*BinOp, *BinOp->getType()),
                                         instrNameOrVal(BinOp->getOperand(0)),
                                         instrNameOrVal(BinOp->getOperand(1)))));
     }
@@ -527,7 +528,7 @@ SMTRef predicateFun(const llvm::CmpInst &cmp, SMTRef expr) {
 }
 
 /// Convert an LLVM op to an SMT op
-string opName(const llvm::BinaryOperator &Op) {
+string opName(const llvm::BinaryOperator &Op, const llvm::Type &Type) {
     if (SMTGenerationOpts::getInstance().BitVect) {
         switch (Op.getOpcode()) {
         case Instruction::Add:
@@ -544,12 +545,13 @@ string opName(const llvm::BinaryOperator &Op) {
             return "bvsrem";
         case Instruction::URem:
             return "bvurem";
+        // Bit operations on boolean values must yield a bool
         case Instruction::Or:
-            return "bvor";
+            return Type.isIntegerTy(1) ? "or" : "bvor";
         case Instruction::And:
-            return "bvand";
+            return Type.isIntegerTy(1) ? "and" : "bvand";
         case Instruction::Xor:
-            return "bvxor";
+            return Type.isIntegerTy(1) ? "xor" : "bvxor";
         case Instruction::AShr:
             return "bvashr";
         case Instruction::LShr:
