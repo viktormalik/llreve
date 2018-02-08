@@ -70,8 +70,7 @@ vector<DefOrCallInfo> blockAssignments(const llvm::BasicBlock &BB,
                     }
                     definitions.emplace_back(
                         toCallInfo(CallInst->getName(), prog, *CallInst));
-                    if (CallInst->getMetadata("is_nondet") &&
-                        CallInst->getType()->isPointerTy()
+                    if (CallInst->getType()->isPointerTy()
                         && SMTGenerationOpts::getInstance().Stack ==
                            StackOpt::Enabled) {
                        definitions.emplace_back(makeAssignment(
@@ -353,7 +352,8 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
         result.push_back(makeAssignment(bitCast->getName(), std::move(cast)));
 
         if (bitCast->getSrcTy()->isPointerTy() &&
-            bitCast->getDestTy()->isPointerTy()) {
+            bitCast->getDestTy()->isPointerTy() &&
+            SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled) {
             result.push_back(
                     makeAssignment(string(bitCast->getName()) + "_OnStack",
                                    instrLocation(bitCast->getOperand(0))));
