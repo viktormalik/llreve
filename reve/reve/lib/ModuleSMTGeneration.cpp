@@ -36,6 +36,15 @@ vector<SharedSMTRef> generateSMT(MonoPair<const llvm::Module &> modules,
     std::vector<SortedVar> variableDeclarations;
     SMTGenerationOpts &smtOpts = SMTGenerationOpts::getInstance();
 
+    if (hasFixedAbstraction(*smtOpts.MainFunctions.first) &&
+        hasFixedAbstraction(*smtOpts.MainFunctions.second)) {
+        declarations.push_back(
+                make_unique<Assert>(std::make_unique<ConstantBool>(false)));
+        declarations.push_back(std::make_unique<CheckSat>());
+        smtOpts.OutputFormat = SMTFormat::SMTHorn;
+        return declarations;
+    }
+
     if (smtOpts.OutputFormat == SMTFormat::Z3) {
         declarations.push_back(make_unique<smt::FunDecl>(
             "END_QUERY", std::vector<Type>(), boolType()));
