@@ -38,7 +38,8 @@ auto store_Declaration() -> smt::SMTRef;
 auto globalDeclarations(const llvm::Module &mod1, const llvm::Module &mod2)
     -> std::vector<smt::SharedSMTRef>;
 auto globalDeclarationsForMod(int globalPointer, const llvm::Module &mod,
-                              const llvm::Module &otherMod, int program)
+                              std::set<const llvm::GlobalVariable *> &otherMod,
+                              int program)
     -> std::vector<smt::SharedSMTRef>;
 auto stringConstants(const llvm::Module &mod, std::string heap)
     -> std::vector<smt::SharedSMTRef>;

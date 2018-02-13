@@ -197,27 +197,19 @@ SMTRef store_Declaration() {
     return make_unique<FunDef>("store_", std::move(args), memoryType(), body);
 }
 
-vector<SharedSMTRef> globalDeclarationsForMod(int globalPointer,
-                                              const llvm::Module &mod,
-                                              const llvm::Module &modOther,
-                                              int program) {
+vector<SharedSMTRef> globalDeclarationsForMod(
+        int globalPointer,
+        const llvm::Module &mod,
+        set<const llvm::GlobalVariable *> &coveredGlobals,
+        int program) {
     std::vector<SharedSMTRef> declarations;
     for (auto &global1 : mod.globals()) {
         std::string globalName = global1.getName();
-        std::string otherGlobalName = dropSuffixFromName(globalName) + "$" +
-                                      std::to_string(swapIndex(program));
-        if (!modOther.getNamedGlobal(otherGlobalName)) {
+        if (coveredGlobals.find(&global1) == coveredGlobals.end()) {
             // we want the size of string constants not the size of the
             // pointer
             // pointing to them
-            if (const auto pointerTy =
-                    llvm::dyn_cast<llvm::PointerType>(global1.getType())) {
-                globalPointer +=
-                    typeSize(pointerTy->getElementType(), mod.getDataLayout());
-            } else {
-                globalPointer +=
-                    typeSize(global1.getType(), mod.getDataLayout());
-            }
+            globalPointer += globalSize(global1);
             std::vector<SortedVar> empty;
             auto constDef1 = make_unique<FunDef>(
                     globalName, empty, int64Type(),
@@ -235,11 +227,40 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     // same pointer, then match globals that only exist in one module
     std::vector<SharedSMTRef> declarations;
     std::vector<MonoPair<const llvm::GlobalVariable &>> resizedGlobals;
+    std::set<const llvm::GlobalVariable *> coveredGlobals1;
+    std::set<const llvm::GlobalVariable *> coveredGlobals2;
     int globalPointer = 1;
     for (auto &global1 : mod1.globals()) {
         std::string globalName = global1.getName();
-        std::string otherGlobalName = dropSuffixFromName(globalName) + "$2";
+        std::string otherGlobalName;
+        if (global1.isConstant() && global1.hasGlobalUnnamedAddr()) {
+            // If the global has unnamed_addr, then the pointer does not matter,
+            // only the content does. In that case we have to find global in
+            // other module with same content
+            // For now, we limit ourselves to string constants
+            auto globalValue = global1.getInitializer();
+            for (auto &otherGlobal : mod2.globals()) {
+                if (!(otherGlobal.isConstant() &&
+                      otherGlobal.hasGlobalUnnamedAddr()))
+                    continue;
+                auto otherGlobalValue = otherGlobal.getInitializer();
+                if (auto globStr1 = llvm::dyn_cast<llvm::ConstantDataArray>(
+                        globalValue)) {
+                    if (auto globStr2 = llvm::dyn_cast<llvm::ConstantDataArray>(
+                            otherGlobalValue)) {
+                        if (globStr1->getRawDataValues() ==
+                            globStr2->getRawDataValues())
+                            otherGlobalName = otherGlobal.getName();
+                    }
+                }
+            }
+        }
+        else
+            otherGlobalName = dropSuffixFromName(globalName) + "$2";
+
         if (auto global2 = mod2.getNamedGlobal(otherGlobalName)) {
+            coveredGlobals1.insert(&global1);
+            coveredGlobals2.insert(global2);
             // we want the size of string constants not the size of the
             // pointer
             // pointing to them
@@ -280,8 +301,10 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
            }
         }
     }
-    auto decls1 = globalDeclarationsForMod(globalPointer, mod1, mod2, 1);
-    auto decls2 = globalDeclarationsForMod(globalPointer, mod2, mod1, 2);
+    auto decls1 = globalDeclarationsForMod(globalPointer, mod1,
+                                           coveredGlobals1, 1);
+    auto decls2 = globalDeclarationsForMod(globalPointer, mod2,
+                                           coveredGlobals2, 2);
     declarations.insert(declarations.end(), decls1.begin(), decls1.end());
     declarations.insert(declarations.end(), decls2.begin(), decls2.end());
     if (SMTGenerationOpts::getInstance().BitVect) {
