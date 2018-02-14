@@ -279,3 +279,15 @@ int globalSize(const llvm::GlobalVariable &global) {
     auto mod = global.getParent();
     return typeSize(globalType(global), mod->getDataLayout());
 }
+
+std::string heapPtrName(string allocSiteSuffix, int progIndex) {
+    return "$heap_ptr_" + allocSiteSuffix + "$" + std::to_string(progIndex);
+}
+
+std::string heapPtrName(int allocSiteIndex, Program prog) {
+    return heapPtrName(std::to_string(allocSiteIndex), programIndex(prog));
+}
+
+std::string heapPtrName(std::string allocSiteSuffix, Program prog) {
+    return heapPtrName(allocSiteSuffix, programIndex(prog));
+}

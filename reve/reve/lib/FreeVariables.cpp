@@ -151,6 +151,7 @@ auto addMemoryArrays(vector<smt::SortedVar> vars, Program prog)
     return vars;
 }
 FreeVarsMap freeVars(PathMap map, vector<smt::SortedVar> funArgs,
+                     const vector<const llvm::CallInst *> &allocSites,
                      Program prog) {
     std::map<Mark, set<SortedVar>> freeVarsMap;
     FreeVarsMap freeVarsMapVect;
@@ -210,7 +211,20 @@ FreeVarsMap freeVars(PathMap map, vector<smt::SortedVar> funArgs,
 
     // The input arguments should be in the function argument order so we can’t
     // add them before
-    freeVarsMapVect[ENTRY_MARK] = addMemoryArrays(funArgs, prog);
+    auto entryArgs = addMemoryArrays(funArgs, prog);
+    entryArgs = addHeapPointers(entryArgs, allocSites, prog);
+    freeVarsMapVect[ENTRY_MARK] = entryArgs;
 
     return freeVarsMapVect;
+}
+
+std::vector<smt::SortedVar> addHeapPointers(
+        std::vector<smt::SortedVar> vars,
+        const std::vector<const llvm::CallInst *> &allocSites,
+        Program prog) {
+    for (unsigned i = 0; i < allocSites.size(); ++i) {
+        auto ptr1 = SortedVar(heapPtrName(i, prog), pointerType());
+        vars.push_back(ptr1);
+    }
+    return vars;
 }

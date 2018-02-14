@@ -155,6 +155,9 @@ auto stackName(int progIndex) -> std::string;
 auto stackResultName(Program prog) -> std::string;
 auto stackPointerName(Program prog) -> std::string;
 auto stackPointerName(int progIndex) -> std::string;
+auto heapPtrName(int allocSiteIndex, Program prog) -> std::string;
+auto heapPtrName(std::string allocSiteSuffix, Program prog) -> std::string;
+auto heapPtrName(std::string allocSiteSuffix, int progIndex) -> std::string;
 
 std::vector<std::string> &split(const std::string &s, char delim,
                                 std::vector<std::string> &elems);

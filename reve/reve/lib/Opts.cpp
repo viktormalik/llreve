@@ -329,11 +329,16 @@ addConstToFunctionPairSet(set<MonoPair<llvm::Function *>> functionPairs) {
 
 bool isLlreveIntrinsic(const llvm::Function &f) {
     return f.getName() == "__mark" || f.getName() == "__splitmark" ||
-           f.getName() == "__criterion";
+           f.getName() == "__criterion" || isHeapAllocation(f);
 }
 
 bool isIntrinsicSupported(const llvm::Function &Fun){
     return Fun.isIntrinsic() && Fun.getIntrinsicID() == llvm::Intrinsic::memcpy;
+}
+
+bool isHeapAllocation(const llvm::Function &Fun) {
+    return Fun.getName() == "malloc" || Fun.getName() == "calloc" ||
+           Fun.getName() == "kmalloc" || Fun.getName() == "kzalloc";
 }
 
 bool hasMutualFixedAbstraction(MonoPair<const llvm::Function *> functions) {

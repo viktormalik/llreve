@@ -20,11 +20,15 @@ struct AnalysisResults {
     std::vector<smt::SortedVar> functionArguments;
     FreeVarsMap freeVariables;
     llvm::Value *returnInstruction;
+    std::vector<const llvm::CallInst *> allocationSites;
+
     AnalysisResults(BidirBlockMarkMap marks, PathMap pm,
                     std::vector<smt::SortedVar> funArgs, FreeVarsMap freeVars,
-                    llvm::Value *returnInstruction)
-        : blockMarkMap(marks), paths(pm), functionArguments(funArgs),
-          freeVariables(freeVars), returnInstruction(returnInstruction) {}
+                    llvm::Value *returnInstruction,
+                    std::vector<const llvm::CallInst *> allocationSites)
+            : blockMarkMap(marks), paths(pm), functionArguments(funArgs),
+              freeVariables(freeVars), returnInstruction(returnInstruction),
+              allocationSites(allocationSites) {}
 };
 
 using AnalysisResultsMap = std::map<const llvm::Function *, AnalysisResults>;

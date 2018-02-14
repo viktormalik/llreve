@@ -65,6 +65,10 @@ auto combineOp(const llvm::BinaryOperator &op, std::string opName,
                smt::SMTRef firstArg, smt::SMTRef secondArg) -> smt::SMTRef;
 auto memcpyIntrinsic(const llvm::CallInst *callInst, Program prog)
     -> std::vector<DefOrCallInfo>;
+auto allocOnHeap(const llvm::CallInst *callInst, Program prog)
+    -> std::vector<DefOrCallInfo>;
 auto toCallInfo(std::string assignedTo, Program prog,
                 const llvm::CallInst &callInst) -> std::unique_ptr<CallInfo>;
 auto isPtrDiff(const llvm::Instruction &instr) -> bool;
+auto processIntrinsic(const llvm::CallInst *callInst, Program prog)
+    -> std::vector<DefOrCallInfo>;

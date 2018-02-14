@@ -55,9 +55,8 @@ vector<DefOrCallInfo> blockAssignments(const llvm::BasicBlock &BB,
                     logErrorData("Call to undeclared function\n", *CallInst);
                     exit(1);
                 }
-                if (fun->getIntrinsicID() == llvm::Intrinsic::memcpy) {
-                    vector<DefOrCallInfo> defs =
-                        memcpyIntrinsic(CallInst, prog);
+                auto defs = processIntrinsic(CallInst, prog);
+                if (!defs.empty()) {
                     for (auto &def : defs) {
                         definitions.emplace_back(std::move(def));
                     }
@@ -728,3 +727,34 @@ auto coupledCalls(const CallInfo &call1, const CallInfo &call2) -> bool {
            call1.fun.getFunctionType()->getNumParams() ==
                call2.fun.getFunctionType()->getNumParams();
 }
+
+std::vector<DefOrCallInfo> allocOnHeap(
+        const llvm::CallInst *callInst,
+        Program prog) {
+    std::vector<DefOrCallInfo> definitions;
+    auto N = callInst->getMetadata("alloc_site_suffix");
+    auto allocSiteSuffix =
+            llvm::cast<llvm::MDString>(N->getOperand(0))->getString();
+    definitions.push_back(makeAssignment(callInst->getName(),
+                                         stringExpr(heapPtrName(allocSiteSuffix,
+                                                                prog))));
+    if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled) {
+        definitions.push_back(
+                makeAssignment(string(callInst->getName()) + "_OnStack",
+                               std::make_unique<ConstantBool>(false)));
+    }
+    return definitions;
+}
+
+std::vector<DefOrCallInfo> processIntrinsic(const llvm::CallInst *callInst,
+                                            Program prog) {
+    auto fun = callInst->getCalledFunction();
+    if (fun->getIntrinsicID() == llvm::Intrinsic::memcpy)
+        return memcpyIntrinsic(callInst, prog);
+
+    if (isHeapAllocation(*fun))
+        return allocOnHeap(callInst, prog);
+
+    return {};
+}
+

@@ -15,6 +15,7 @@
 #include "InlinePass.h"
 #include "InlinePass.h"
 #include "InstCombine.h"
+#include "Memory.h"
 #include "MonoPair.h"
 #include "NondetRemovalPass.h"
 #include "PathAnalysis.h"
@@ -132,6 +133,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     if (!opts.InferMarks) {
         fpm.addPass(RemoveMarkRefsPass{});
     }
+    fam.registerPass([] { return AllocationSiteAnalysis{}; });
     fpm.addPass(InstCombinePass{});
     fpm.addPass(llvm::ADCEPass()); // supported
     // TODO reenable
@@ -156,10 +158,12 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     auto retInst = getReturnInstruction(fun);
     if (opts.InferMarks) {
         return {fam.getResult<InferMarksAnalysis>(fun),
-                fam.getResult<PathAnalysis>(fun), retInst};
+                fam.getResult<PathAnalysis>(fun), retInst,
+                fam.getResult<AllocationSiteAnalysis>(fun)};
     } else {
         return {fam.getResult<MarkAnalysis>(fun),
-                fam.getResult<PathAnalysis>(fun), retInst};
+                fam.getResult<PathAnalysis>(fun), retInst,
+                fam.getResult<AllocationSiteAnalysis>(fun)};
     }
 }
 
@@ -184,11 +188,13 @@ AnalysisResults runAnalyses(
     std::map<const llvm::Function *, PassAnalysisResults> &passResults) {
     const auto functionArguments = functionArgs(fun);
     const auto freeVariables =
-        freeVars(passResults.at(&fun).paths, functionArguments, prog);
+            freeVars(passResults.at(&fun).paths, functionArguments,
+                     passResults.at(&fun).allocationSites, prog);
     return AnalysisResults(passResults.at(&fun).blockMarkMap,
                            passResults.at(&fun).paths, functionArguments,
                            freeVariables,
-                           passResults.at(&fun).returnInstruction);
+                           passResults.at(&fun).returnInstruction,
+                           passResults.at(&fun).allocationSites);
 }
 
 bool doesAccessHeap(const llvm::Module &mod) {

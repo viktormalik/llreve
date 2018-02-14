@@ -22,6 +22,7 @@ struct PassAnalysisResults {
     BidirBlockMarkMap blockMarkMap;
     PathMap paths;
     llvm::Value *returnInstruction;
+    std::vector<const llvm::CallInst *> allocationSites;
 };
 
 AnalysisResultsMap preprocessModules(MonoPair<llvm::Module &> modules,

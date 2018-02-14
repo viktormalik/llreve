@@ -11,8 +11,20 @@
 #pragma once
 
 #include <regex>
+#include "llvm/IR/PassManager.h"
 
 const std::regex HEAP_REGEX =
     std::regex("^(HEAP|STACK)\\$(1|2)(.*?)$", std::regex::ECMAScript);
 const std::regex INDEX_REGEX =
     std::regex("^i(1|2)(_res|_old|_stack)?$", std::regex::ECMAScript);
+
+class AllocationSiteAnalysis
+        : public llvm::AnalysisInfoMixin<AllocationSiteAnalysis> {
+  public:
+    using Result = std::vector<const llvm::CallInst *>;
+    Result run(llvm::Function &Fun, llvm::FunctionAnalysisManager &am);
+
+  private:
+    friend llvm::AnalysisInfoMixin<AllocationSiteAnalysis>;
+    static llvm::AnalysisKey Key;
+};

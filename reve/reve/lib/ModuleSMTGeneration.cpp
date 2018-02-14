@@ -375,6 +375,16 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
     functionArgumentsPair.second =
         addMemoryArrays(functionArgumentsPair.second, Program::Second);
 
+    // Add pointers to heap locations allocated within function
+    functionArgumentsPair.first =
+            addHeapPointers(functionArgumentsPair.first,
+                            analysisResults.at(funs.first).allocationSites,
+                            Program::First);
+    functionArgumentsPair.second =
+            addHeapPointers(functionArgumentsPair.second,
+                            analysisResults.at(funs.second).allocationSites,
+                            Program::Second);
+
     vector<SortedVar> funArgs;
     funArgs.insert(funArgs.end(), functionArgumentsPair.first.begin(),
                    functionArgumentsPair.first.end());
