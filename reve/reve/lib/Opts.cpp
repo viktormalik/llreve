@@ -9,6 +9,7 @@
  */
 
 #include "Opts.h"
+#include "DebugInfo.h"
 #include "Helper.h"
 #include "SMT.h"
 
@@ -248,7 +249,8 @@ inferCoupledFunctionsByName(MonoPair<llvm::Module &> modules) {
     set<MonoPair<llvm::Function *>> coupledFunctions;
     for (auto &fun1 : modules.first) {
         // These functions are removed before we ever look for couplings
-        if (isLlreveIntrinsic(fun1) || isIntrinsicSupported(fun1)) {
+        if (isLlreveIntrinsic(fun1) || isIntrinsicSupported(fun1) ||
+            isDebugInfo(fun1)) {
             continue;
         }
         llvm::Function *fun2 = modules.second.getFunction(fun1.getName());
