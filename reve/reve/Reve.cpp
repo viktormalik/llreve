@@ -8,6 +8,7 @@
  * See LICENSE (distributed with this file) for details.
  */
 
+#include <DebugInfo.h>
 #include "Compile.h"
 #include "GitSHA1.h"
 #include "ModuleSMTGeneration.h"
@@ -254,6 +255,7 @@ int main(int argc, const char **argv) {
                             parseFunctionPairFlags(CoupleFunctionsFlag)),
         functionNumerals, reversedFunctionNumerals);
 
+    DebugInfo DBInfo(moduleRefs);
     const auto analysisResults = preprocessModules(moduleRefs, preprocessOpts);
     printModule(*modules.first, IRFileName1);
     printModule(*modules.second, IRFileName2);
