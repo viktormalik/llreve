@@ -45,11 +45,21 @@ template <typename T> std::unique_ptr<smt::SMTExpr> resolveGEP(T &gep) {
         if (mod == nullptr) {
             logErrorData("Couldn’t cast gep to an instruction:\n", gep);
         }
+        // Check if the index must be aligned with other module (this is stored
+        // in metadata)
+        llvm::Value *ixVal = *ix;
+        if (auto GEPInstr = llvm::dyn_cast<llvm::GetElementPtrInst>(&gep)) {
+            if (auto idxMD = GEPInstr->getMetadata(
+                    "idx_align_" + std::to_string(indices.size()))) {
+                ixVal = llvm::dyn_cast<llvm::ConstantAsMetadata>(
+                        idxMD->getOperand(0))->getValue();
+            }
+        }
         indices.push_back(*ix);
         const auto indexedType = llvm::GetElementPtrInst::getIndexedType(
             type, llvm::ArrayRef<llvm::Value *>(indices));
         const auto size = typeSize(indexedType, mod->getDataLayout());
-        auto smtIx = instrNameOrVal(*ix);
+        auto smtIx = instrNameOrVal(ixVal);
         if (llreve::opts::SMTGenerationOpts::getInstance().BitVect) {
             smtIx = smt::makeOp(
                 "(_ sign_extend " +
