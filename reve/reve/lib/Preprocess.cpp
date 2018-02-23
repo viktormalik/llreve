@@ -10,6 +10,7 @@
 
 #include "Preprocess.h"
 
+#include "DebugInfo.h"
 #include "Helper.h"
 #include "InferMarks.h"
 #include "InlinePass.h"
@@ -117,6 +118,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     llvm::FunctionPassManager fpm(false);
     llvm::PassBuilder pb;
     pb.registerFunctionAnalyses(fam);
+    fpm.addPass(RemoveDebugInfoPass{});
     fpm.addPass(UnifyFunctionExitNodes{});
     fam.registerPass([] { return FunctionExitNodeAnalysis(); });
 
