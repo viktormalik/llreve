@@ -190,6 +190,8 @@ auto searchFunctionConditionsInFile(std::string file)
     -> std::multimap<std::string, std::string>;
 auto parseFunctionPairFlags(llreve::cl::list<std::string> &functionPairFlag)
     -> std::set<MonoPair<std::string>>;
+auto splitFunctionPair(const std::string &funPair)
+    -> MonoPair<std::string>;
 // Depending on the value of disableAutoCoupling this will infer functions to be
 // coupled based on their name or use the function names in the
 // `coupledFunctionNames`

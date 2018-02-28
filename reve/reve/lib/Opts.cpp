@@ -225,14 +225,19 @@ set<MonoPair<string>>
 parseFunctionPairFlags(llreve::cl::list<string> &functionPairFlags) {
     set<MonoPair<string>> functionPairs;
     for (const auto &flag : functionPairFlags) {
-        const auto &splitted = split(flag, ',');
-        if (splitted.size() != 2) {
-            logError("Could not parse '" + flag + "' as a function pair\n");
-            exit(1);
-        }
-        functionPairs.insert({splitted.at(0), splitted.at(1)});
+        auto funPair = splitFunctionPair(flag);
+        functionPairs.insert(funPair);
     }
     return functionPairs;
+}
+
+MonoPair<std::string> splitFunctionPair(const string &funPair) {
+    const auto &splitted = split(funPair, ',');
+    if (splitted.size() != 2) {
+        logError("Could not parse '" + funPair + "' as a function pair\n");
+        exit(1);
+    }
+    return {splitted.at(0), splitted.at(1)};
 }
 
 set<MonoPair<llvm::Function *>>
@@ -305,15 +310,22 @@ MonoPair<llvm::Function *> findMainFunction(MonoPair<llvm::Module &> modules,
     if (functionName.empty()) {
         return findMainFunction(modules, inferMainFunctionName(modules.first));
     }
-    auto fun1 = modules.first.getFunction(functionName);
-    auto fun2 = modules.second.getFunction(functionName);
+    std::string fun1Name = functionName;
+    std::string fun2Name = functionName;
+    if (functionName.find(",") != std::string::npos) {
+        auto funPair = splitFunctionPair(functionName);
+        fun1Name = funPair.first;
+        fun2Name = funPair.second;
+    }
+    auto fun1 = modules.first.getFunction(fun1Name);
+    auto fun2 = modules.second.getFunction(fun2Name);
     if (fun1 == nullptr) {
-        logError("Could not find function '" + functionName +
+        logError("Could not find function '" + fun1Name +
                  "' in first module\n");
         exit(1);
     }
     if (fun2 == nullptr) {
-        logError("Could not find function '" + functionName +
+        logError("Could not find function '" + fun2Name +
                  "' in second module\n");
         exit(1);
     }
