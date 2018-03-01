@@ -12,6 +12,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Transforms/Utils/FunctionComparator.h>
+#include <set>
+#include "MonoPair.h"
 
 /*
  * Pass doing simplification that is independent for each function.
@@ -79,7 +81,7 @@ public:
     ModuleSimplifier(llvm::Module &First, llvm::Module &Second)
             : First(First), Second(Second) {}
 
-    void simplifyModules();
+    std::set<MonoPair<llvm::Function *>> simplifyModules();
 
 protected:
     llvm::Module &First;
@@ -87,7 +89,7 @@ protected:
 
     void runIndependentPasses(llvm::Module &Module);
 
-    void unifyFunctionAbstractions(
+    std::set<MonoPair<llvm::Function *>> unifyFunctionAbstractions(
             FunctionAbstractionsGenerator::FunMap &FirstMap,
             FunctionAbstractionsGenerator::FunMap &SecondMap);
 

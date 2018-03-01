@@ -233,7 +233,7 @@ int main(int argc, const char **argv) {
         generateFunctionMap(moduleRefs);
 
     ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second);
-    modSimplifier.simplifyModules();
+    auto funAbstractions = modSimplifier.simplifyModules();
 
     SMTGenerationOpts::initialize(
         findMainFunction(moduleRefs, MainFunctionFlag),
@@ -252,7 +252,8 @@ int main(int argc, const char **argv) {
         addConstToFunctionPairSet(lookupFunctionNamePairs(
             moduleRefs, parseFunctionPairFlags(AssumeEquivalentFlags))),
         getCoupledFunctions(moduleRefs, DisableAutoCouplingFlag,
-                            parseFunctionPairFlags(CoupleFunctionsFlag)),
+                            parseFunctionPairFlags(CoupleFunctionsFlag),
+                            funAbstractions),
         functionNumerals, reversedFunctionNumerals);
 
     DebugInfo DBInfo(moduleRefs);

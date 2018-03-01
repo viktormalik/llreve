@@ -242,12 +242,16 @@ MonoPair<std::string> splitFunctionPair(const string &funPair) {
 
 set<MonoPair<llvm::Function *>>
 getCoupledFunctions(MonoPair<llvm::Module &> modules, bool disableAutoCoupling,
-                    std::set<MonoPair<std::string>> coupledFunctionNames) {
+                    std::set<MonoPair<std::string>> coupledFunctionNames,
+                    std::set<MonoPair<llvm::Function *>> &funAbstractions) {
+    set<MonoPair<llvm::Function *>> result;
     if (disableAutoCoupling) {
-        return lookupFunctionNamePairs(modules, coupledFunctionNames);
+        result = lookupFunctionNamePairs(modules, coupledFunctionNames);
     } else {
-        return inferCoupledFunctionsByName(modules);
+        result = inferCoupledFunctionsByName(modules);
     }
+    result.insert(funAbstractions.begin(), funAbstractions.end());
+    return result;
 }
 set<MonoPair<llvm::Function *>>
 inferCoupledFunctionsByName(MonoPair<llvm::Module &> modules) {

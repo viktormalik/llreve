@@ -137,14 +137,14 @@ const std::string typeToStr(const llvm::Type *Type) {
     return rso.str();
 }
 
-void ModuleSimplifier::simplifyModules() {
+std::set<MonoPair<llvm::Function *>> ModuleSimplifier::simplifyModules() {
     runIndependentPasses(First);
     runIndependentPasses(Second);
 
     llvm::ModuleAnalysisManager mam(false);
     mam.registerPass([] { return FunctionAbstractionsGenerator(); });
 
-    unifyFunctionAbstractions(
+    auto abstractionCouples = unifyFunctionAbstractions(
             mam.getResult<FunctionAbstractionsGenerator>(First),
             mam.getResult<FunctionAbstractionsGenerator>(Second));
 
@@ -171,15 +171,20 @@ void ModuleSimplifier::simplifyModules() {
             FunSecond->deleteBody();
         }
     }
+    // This function returns pairs of new functions that must be coupled. It is
+    // necessary when using function couplings defined at the command line
+    return abstractionCouples;
 }
 
 /*
  * Makes sure that functions implementing same abstractions are called the same
  * in both modules.
  */
-void ModuleSimplifier::unifyFunctionAbstractions(
+std::set<MonoPair<llvm::Function *>>
+ModuleSimplifier::unifyFunctionAbstractions(
         FunctionAbstractionsGenerator::FunMap &FirstMap,
         FunctionAbstractionsGenerator::FunMap &SecondMap) {
+    std::set<MonoPair<llvm::Function *>> coupledFuns;
     for (auto &FirstFun : FirstMap) {
         auto SecondFun = SecondMap.find(FirstFun.first());
 
@@ -195,7 +200,10 @@ void ModuleSimplifier::unifyFunctionAbstractions(
                       FirstFun.second->getName()))) {
             FirstFun.second->setName(SecondFun->second->getName());
         }
+
+        coupledFuns.insert({FirstFun.second, SecondFun->second});
     }
+    return coupledFuns;
 }
 
 bool ModuleSimplifier::trySwap(FunctionAbstractionsGenerator::FunMap &Map,
