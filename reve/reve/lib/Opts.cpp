@@ -263,13 +263,6 @@ inferCoupledFunctionsByName(MonoPair<llvm::Module &> modules) {
             continue;
         }
         coupledFunctions.insert({&fun1, fun2});
-
-        if (hasMutualFixedAbstraction({&fun1, fun2})) {
-            if (!hasFixedAbstraction(fun1))
-                fun1.deleteBody();
-            if (!hasFixedAbstraction(*fun2))
-                fun2->deleteBody();
-        }
     }
     return coupledFunctions;
 }

@@ -152,8 +152,13 @@ void ModuleSimplifier::simplifyModules() {
         auto FunSecond = Second.getFunction(FunFirst.getName());
         if (!FunSecond) continue;
 
-        if (FunFirst.isDeclaration() || FunSecond->isDeclaration())
+        if (FunFirst.isDeclaration() || FunSecond->isDeclaration()) {
+            if (!FunFirst.isDeclaration())
+                FunFirst.deleteBody();
+            if (!FunSecond->isDeclaration())
+                FunSecond->deleteBody();
             continue;
+        }
 
         DifferentialGlobalNumberState gs(&First, &Second);
         llvm::FunctionComparator fComp(&FunFirst, FunSecond, &gs);
