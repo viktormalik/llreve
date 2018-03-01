@@ -68,21 +68,22 @@ template <typename T> std::unique_ptr<smt::SMTExpr> resolveGEP(T &gep) {
                     ")",
                 std::move(smtIx));
         }
-        if (size == 1) {
-            args.push_back(std::move(smtIx));
-        } else {
-            if (llreve::opts::SMTGenerationOpts::getInstance().BitVect) {
-                args.push_back(smt::makeOp(
-                    "bvmul",
-                    smt::stringExpr("(_ bv" + std::to_string(size) + " 64)"),
-                    std::move(smtIx)));
-            } else {
-                args.push_back(smt::makeOp(
-                    "*",
-                    std::make_unique<smt::ConstantInt>(llvm::APInt(64, size)),
-                    std::move(smtIx)));
-            }
-        }
+        args.push_back(std::move(smtIx));
+//        if (size == 1) {
+//            args.push_back(std::move(smtIx));
+//        } else {
+//            if (llreve::opts::SMTGenerationOpts::getInstance().BitVect) {
+//                args.push_back(smt::makeOp(
+//                    "bvmul",
+//                    smt::stringExpr("(_ bv" + std::to_string(size) + " 64)"),
+//                    std::move(smtIx)));
+//            } else {
+//                args.push_back(smt::makeOp(
+//                    "*",
+//                    std::make_unique<smt::ConstantInt>(llvm::APInt(64, size)),
+//                    std::move(smtIx)));
+//            }
+//        }
     }
     if (llreve::opts::SMTGenerationOpts::getInstance().BitVect) {
         return std::make_unique<smt::Op>("bvadd", args);
