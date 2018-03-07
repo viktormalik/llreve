@@ -232,11 +232,14 @@ int main(int argc, const char **argv) {
     std::tie(functionNumerals, reversedFunctionNumerals) =
         generateFunctionMap(moduleRefs);
 
-    ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second);
+    auto MainFunctions = findMainFunction(moduleRefs, MainFunctionFlag);
+
+    ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second,
+                                   *MainFunctions.first, *MainFunctions.second);
     auto funAbstractions = modSimplifier.simplifyModules();
 
     SMTGenerationOpts::initialize(
-        findMainFunction(moduleRefs, MainFunctionFlag),
+        MainFunctions,
         HeapFlag ? HeapOpt::Enabled : HeapOpt::Disabled,
         StackFlag ? StackOpt::Enabled : StackOpt::Disabled,
         GlobalConstantsFlag ? GlobalConstantsOpt::Enabled

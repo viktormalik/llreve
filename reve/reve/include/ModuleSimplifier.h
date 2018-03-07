@@ -78,8 +78,10 @@ public:
  */
 class ModuleSimplifier {
 public:
-    ModuleSimplifier(llvm::Module &First, llvm::Module &Second)
-            : First(First), Second(Second) {}
+    ModuleSimplifier(llvm::Module &First, llvm::Module &Second,
+                     llvm::Function &FirstMain, llvm::Function &SecondMain)
+            : First(First), Second(Second),
+              FirstMain(FirstMain), SecondMain(SecondMain) {}
 
     std::set<MonoPair<llvm::Function *>> simplifyModules();
 
@@ -87,7 +89,12 @@ protected:
     llvm::Module &First;
     llvm::Module &Second;
 
+    llvm::Function &FirstMain;
+    llvm::Function &SecondMain;
+
     void runIndependentPasses(llvm::Module &Module);
+
+    void inlineCalled(llvm::Module &Mod, llvm::Function &Fun);
 
     std::set<MonoPair<llvm::Function *>> unifyFunctionAbstractions(
             FunctionAbstractionsGenerator::FunMap &FirstMap,

@@ -9,8 +9,10 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InlineAsm.h>
+#include <llvm/Transforms/IPO/AlwaysInliner.h>
 #include <llvm/Transforms/Scalar/DCE.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <Opts.h>
 
 llvm::PreservedAnalyses IndependentSimplifyPass::run(
         llvm::Function &Fun,
@@ -171,6 +173,12 @@ std::set<MonoPair<llvm::Function *>> ModuleSimplifier::simplifyModules() {
             FunSecond->deleteBody();
         }
     }
+
+    // Inline functions called by main in both modules - this will simplify the
+    // solving
+    inlineCalled(First, FirstMain);
+    inlineCalled(Second, SecondMain);
+
     // This function returns pairs of new functions that must be coupled. It is
     // necessary when using function couplings defined at the command line
     return abstractionCouples;
@@ -229,6 +237,31 @@ void ModuleSimplifier::runIndependentPasses(llvm::Module &Module) {
     fpm.addPass(llvm::DCEPass {});
     for (auto &Fun : Module)
         fpm.run(Fun, fam);
+}
+
+void ModuleSimplifier::inlineCalled(llvm::Module &Mod, llvm::Function &Fun) {
+    for (auto &BB : Fun) {
+        for (auto &Instr : BB) {
+            if (auto CallInstr = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
+                auto CalledFun = CallInstr->getCalledFunction();
+                CallInstr->dump();
+                if (!CalledFun || CalledFun->isDeclaration() ||
+                    llreve::opts::isLlreveIntrinsic(*CalledFun))
+                    continue;
+
+                CalledFun->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+            }
+        }
+    }
+
+    llvm::ModulePassManager mpm(false);
+    llvm::ModuleAnalysisManager mam(false);
+    llvm::PassBuilder pb;
+    pb.registerModuleAnalyses(mam);
+    mpm.addPass(llvm::AlwaysInlinerPass {});
+    mpm.run(Mod, mam);
+
+    Fun.dump();
 }
 
 uint64_t DifferentialGlobalNumberState::getNumber(llvm::GlobalValue *value) {

@@ -279,11 +279,15 @@ lookupFunctionNamePairs(MonoPair<llvm::Module &> modules,
         llvm::Function *fun1 = modules.first.getFunction(namePair.first);
         llvm::Function *fun2 = modules.second.getFunction(namePair.second);
         if (fun1 == nullptr) {
+            // Since we inline some functions, they may disappear
+            continue;
             logError("Could not find function '" + namePair.first +
                      "' in first module\n");
             exit(1);
         }
         if (fun2 == nullptr) {
+            // Since we inline some functions, they may disappear
+            continue;
             logError("Could not find function '" + namePair.second +
                      "' in second module\n");
             exit(1);
