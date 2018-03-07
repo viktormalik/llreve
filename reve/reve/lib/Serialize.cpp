@@ -118,8 +118,40 @@ struct RemoveForallVisitor : smt::SMTVisitor {
     RemoveForallVisitor(std::set<SortedVar> &introducedVariables)
         : introducedVariables(introducedVariables) {}
     shared_ptr<smt::SMTExpr> reassemble(Forall &forall) override {
-        for (const auto &var : forall.vars) {
+        llvm::StringMap<std::string> renamingMap;
+        for (auto &var : forall.vars) {
+            auto seenVar = introducedVariables.find(var);
+            if (seenVar != introducedVariables.end() &&
+                seenVar->type != var.type) {
+                // We have already seen this variable name with different type
+                // Try to find renamed version with matching type
+                std::string newName;
+                auto renamed = std::find_if(
+                        introducedVariables.begin(),
+                        introducedVariables.end(),
+                        [&var](const SortedVar &other) {
+                            return other.name.find(var.name) !=
+                                   std::string::npos && other.type == var.type;
+                        });
+                if (renamed == introducedVariables.end())
+                {
+                    // Renamed version does not exist -> create one
+                    // To assure name uniqueness, we use the size of
+                    // introducedVariables as a unique key
+                    newName = var.name + "_" +
+                              std::to_string(introducedVariables.size());
+                } else {
+                    // Renamed version exists, use the name
+                    newName = renamed->name;
+                }
+                renamingMap.try_emplace(var.name, newName);
+                var.name = newName;
+            }
             introducedVariables.insert(var);
+        }
+        if (!renamingMap.empty()) {
+            VariableRenamer renamer(renamingMap);
+            forall.expr = forall.expr->accept(renamer);
         }
         return forall.expr;
     }

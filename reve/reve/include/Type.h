@@ -24,6 +24,17 @@ struct Type {
     sexpr::SExprRef toSExpr() const { return self->toSExpr(); }
     unsigned unsafeBitWidth() const { return self->unsafeBitWidth(); }
 
+    bool operator==(const Type &rhs) const {
+        if (getTag() == TypeTag::Int && rhs.getTag() == TypeTag::Int)
+            return unsafeBitWidth() == rhs.unsafeBitWidth();
+        else
+            return getTag() == rhs.getTag();
+    }
+
+    bool operator!=(const Type &rhs) const {
+        return !(operator==(rhs));
+    }
+
   private:
     struct Concept {
         virtual ~Concept() = default;
