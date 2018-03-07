@@ -17,6 +17,7 @@
 #include "Invariant.h"
 #include "Memory.h"
 #include "Slicing.h"
+#include "Type.h"
 
 #include "llvm/IR/Constants.h"
 
@@ -391,11 +392,11 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
     funArgs.insert(funArgs.end(), functionArgumentsPair.second.begin(),
                    functionArgumentsPair.second.end());
 
-    vector<SMTRef> functionArguments1;
+    vector<std::unique_ptr<TypedVariable>> functionArguments1;
     std::transform(
         functionArgumentsPair.first.begin(), functionArgumentsPair.first.end(),
         std::back_inserter(functionArguments1), typedVariableFromSortedVar);
-    vector<SMTRef> functionArguments2;
+    vector<std::unique_ptr<TypedVariable>> functionArguments2;
     std::transform(functionArgumentsPair.second.begin(),
                    functionArgumentsPair.second.end(),
                    std::back_inserter(functionArguments2),
@@ -407,7 +408,7 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
         std::transform(functionArguments1.begin(), functionArguments1.end(),
                        functionArguments2.begin(), std::back_inserter(equalInputs),
                        [](auto &arg1, auto &arg2) {
-                           return makeOp("=", std::move(arg1), std::move(arg2));
+                           return argEquality(arg1, arg2);
                        });
         if (SMTGenerationOpts::getInstance().BitVect) {
             equalInputs.push_back(makeOp(
@@ -570,4 +571,19 @@ void addHeapSelectEquality(std::string largerHeapName,
             "(_ sign_extend " + std::to_string((largerSize - smallerSize) * 8) +
             ")", std::move(smaller));
     equalities.push_back(makeOp("=", std::move(larger), std::move(smaller)));
+}
+
+SMTRef argEquality(std::unique_ptr<TypedVariable> &arg1,
+                   std::unique_ptr<TypedVariable> &arg2) {
+    if (arg1->type.getTag() == TypeTag::Int &&
+        arg2->type.getTag() == TypeTag::Int &&
+        arg1->type.unsafeBitWidth() < arg2->type.unsafeBitWidth()) {
+        // Size of an integer argument has increased
+        string opName = "(_ sign_extend " + std::to_string(
+                arg2->type.unsafeBitWidth() - arg1->type.unsafeBitWidth()) +
+                        ")";
+        SMTRef arg1Resized = makeOp(opName, std::move(arg1));
+        return makeOp("=", std::move(arg1Resized), std::move(arg2));
+    }
+    return makeOp("=", std::move(arg1), std::move(arg2));
 }
