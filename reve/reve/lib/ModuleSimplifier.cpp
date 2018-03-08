@@ -240,6 +240,20 @@ void ModuleSimplifier::runIndependentPasses(llvm::Module &Module) {
 }
 
 void ModuleSimplifier::inlineCalled(llvm::Module &Mod, llvm::Function &Fun) {
+    markCalleesAlwaysInline(Fun);
+
+    llvm::ModulePassManager mpm(false);
+    llvm::ModuleAnalysisManager mam(false);
+    llvm::PassBuilder pb;
+    pb.registerModuleAnalyses(mam);
+    mpm.addPass(llvm::AlwaysInlinerPass {});
+    mpm.run(Mod, mam);
+
+    llvm::errs() << "Function " << Fun.getName() << " after inlining:\n";
+    Fun.dump();
+}
+
+void ModuleSimplifier::markCalleesAlwaysInline(llvm::Function &Fun) {
     for (auto &BB : Fun) {
         for (auto &Instr : BB) {
             if (auto CallInstr = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
@@ -250,18 +264,10 @@ void ModuleSimplifier::inlineCalled(llvm::Module &Mod, llvm::Function &Fun) {
                     continue;
 
                 CalledFun->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+                markCalleesAlwaysInline(*CalledFun);
             }
         }
     }
-
-    llvm::ModulePassManager mpm(false);
-    llvm::ModuleAnalysisManager mam(false);
-    llvm::PassBuilder pb;
-    pb.registerModuleAnalyses(mam);
-    mpm.addPass(llvm::AlwaysInlinerPass {});
-    mpm.run(Mod, mam);
-
-    Fun.dump();
 }
 
 uint64_t DifferentialGlobalNumberState::getNumber(llvm::GlobalValue *value) {

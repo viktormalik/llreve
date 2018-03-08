@@ -95,6 +95,7 @@ protected:
     void runIndependentPasses(llvm::Module &Module);
 
     void inlineCalled(llvm::Module &Mod, llvm::Function &Fun);
+    void markCalleesAlwaysInline(llvm::Function &Fun);
 
     std::set<MonoPair<llvm::Function *>> unifyFunctionAbstractions(
             FunctionAbstractionsGenerator::FunMap &FirstMap,
