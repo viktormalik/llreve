@@ -219,7 +219,9 @@ bool ModuleSimplifier::trySwap(FunctionAbstractionsGenerator::FunMap &Map,
                                const std::string destName) {
     for (auto &Fun : Map) {
         if (Fun.second->getName() == destName) {
-            Fun.second->setName(Map.find(srcHash)->second->getName());
+            const std::string srcName = Map.find(srcHash)->second->getName();
+            Map.find(srcHash)->second->setName("$tmpName");
+            Fun.second->setName(srcName);
             Map.find(srcHash)->second->setName(destName);
             return true;
         }
