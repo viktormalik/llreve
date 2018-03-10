@@ -302,6 +302,27 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
            }
         }
     }
+
+    for (auto &coupled : SMTGenerationOpts::getInstance().CoupledFunctions) {
+        if (isPassedAsArgument(*coupled.first) &&
+            isPassedAsArgument(*coupled.second)) {
+            string nameFirst = string(coupled.first->getName()) + "$1";
+            string nameSecond = string(coupled.second->getName()) + "$2";
+            std::vector<SortedVar> empty;
+            globalPointer += 4;
+            auto constDef1 = make_unique<FunDef>(
+                    nameFirst, empty, int64Type(),
+                    std::make_unique<ConstantInt>(
+                            llvm::APInt(64, -globalPointer, true)));
+            auto constDef2 = make_unique<FunDef>(
+                    nameSecond, empty, int64Type(),
+                    std::make_unique<ConstantInt>(
+                            llvm::APInt(64, -globalPointer, true)));
+            declarations.push_back(std::move(constDef1));
+            declarations.push_back(std::move(constDef2));
+        }
+    }
+
     auto decls1 = globalDeclarationsForMod(globalPointer, mod1,
                                            coveredGlobals1, 1);
     auto decls2 = globalDeclarationsForMod(globalPointer, mod2,

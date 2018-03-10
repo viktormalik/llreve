@@ -326,3 +326,17 @@ std::string heapPtrName(int allocSiteIndex, Program prog) {
 std::string heapPtrName(std::string allocSiteSuffix, Program prog) {
     return heapPtrName(allocSiteSuffix, programIndex(prog));
 }
+
+bool isPassedAsArgument(const llvm::Function &fun) {
+    for (auto user : fun.users()) {
+        if (auto CallInst = llvm::dyn_cast<llvm::CallInst>(user)) {
+            for (auto &arg : CallInst->arg_operands()) {
+                if (auto argFun = llvm::dyn_cast<llvm::Function>(&arg)) {
+                    if (argFun == &fun)
+                        return true;
+                }
+            }
+        }
+    }
+    return false;
+}

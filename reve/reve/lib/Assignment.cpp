@@ -689,7 +689,11 @@ unique_ptr<CallInfo> toCallInfo(string assignedTo, Program prog,
     const auto &funTy = *callInst.getFunctionType();
     const llvm::Function &fun = *callInst.getCalledFunction();
     for (auto &arg : callInst.arg_operands()) {
-        args.push_back(instrNameOrVal(arg, funTy.getParamType(i)));
+        if (const auto funArg = llvm::dyn_cast<llvm::Function>(arg))
+            args.push_back(stringExpr(std::string(funArg->getName()) + "$" +
+                                      std::to_string(programIndex(prog))));
+        else
+            args.push_back(instrNameOrVal(arg, funTy.getParamType(i)));
         ++suppliedArgs;
         if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled &&
             arg->getType()->isPointerTy()) {
