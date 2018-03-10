@@ -359,6 +359,7 @@ SExprRef TypeCast::toSExpr() const {
                             std::to_string(destBitWidth - sourceBitWidth) + ")";
             return std::make_unique<Apply>(opName, std::move(args));
         }
+        case llvm::Instruction::IntToPtr:
         case llvm::Instruction::BitCast: {
             if (destType.getTag() == sourceType.getTag())
                 return operand->toSExpr();

@@ -350,12 +350,17 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
             instrNameOrVal(bitCast->getOperand(0)));
         result.push_back(makeAssignment(bitCast->getName(), std::move(cast)));
 
-        if (bitCast->getSrcTy()->isPointerTy() &&
-            bitCast->getDestTy()->isPointerTy() &&
+        if (bitCast->getDestTy()->isPointerTy() &&
             SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled) {
-            result.push_back(
-                    makeAssignment(string(bitCast->getName()) + "_OnStack",
-                                   instrLocation(bitCast->getOperand(0))));
+            if (bitCast->getSrcTy()->isPointerTy()) {
+                result.push_back(
+                        makeAssignment(string(bitCast->getName()) + "_OnStack",
+                                       instrLocation(bitCast->getOperand(0))));
+            } else {
+                result.push_back(
+                        makeAssignment(string(bitCast->getName()) + "_OnStack",
+                                       make_unique<ConstantBool>(true)));
+            }
         }
         return result;
     }
