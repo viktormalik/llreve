@@ -369,46 +369,81 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
                                     SharedSMTRef body, const llvm::Module &mod1,
                                     const llvm::Module &mod2, bool strings,
                                     bool additionalIn) {
+    // Actual function arguments
     MonoPair<std::vector<smt::SortedVar>> functionArgumentsPair =
         getFunctionArguments(funs, analysisResults);
-    functionArgumentsPair.first =
-        addMemoryArrays(functionArgumentsPair.first, Program::First);
-    functionArgumentsPair.second =
-        addMemoryArrays(functionArgumentsPair.second, Program::Second);
+
+    // Additional arguments: memory locations
+    MonoPair<std::vector<smt::SortedVar>> additionalArgumentsPair = {{}, {}};
+    additionalArgumentsPair.first =
+        addMemoryArrays(additionalArgumentsPair.first, Program::First);
+    additionalArgumentsPair.second =
+        addMemoryArrays(additionalArgumentsPair.second, Program::Second);
 
     // Add pointers to heap locations allocated within function
-    functionArgumentsPair.first =
-            addHeapPointers(functionArgumentsPair.first,
+    additionalArgumentsPair.first =
+            addHeapPointers(additionalArgumentsPair.first,
                             analysisResults.at(funs.first).allocationSites,
                             Program::First);
-    functionArgumentsPair.second =
-            addHeapPointers(functionArgumentsPair.second,
+    additionalArgumentsPair.second =
+            addHeapPointers(additionalArgumentsPair.second,
                             analysisResults.at(funs.second).allocationSites,
                             Program::Second);
 
-    vector<SortedVar> funArgs;
-    funArgs.insert(funArgs.end(), functionArgumentsPair.first.begin(),
-                   functionArgumentsPair.first.end());
-    funArgs.insert(funArgs.end(), functionArgumentsPair.second.begin(),
-                   functionArgumentsPair.second.end());
+    // Arguments of the invariant
+    vector<SortedVar> invariantArgs;
+    invariantArgs.insert(invariantArgs.end(),
+                         functionArgumentsPair.first.begin(),
+                         functionArgumentsPair.first.end());
+    invariantArgs.insert(invariantArgs.end(),
+                         additionalArgumentsPair.first.begin(),
+                         additionalArgumentsPair.first.end());
+    invariantArgs.insert(invariantArgs.end(),
+                         functionArgumentsPair.second.begin(),
+                         functionArgumentsPair.second.end());
+    invariantArgs.insert(invariantArgs.end(),
+                         additionalArgumentsPair.second.begin(),
+                         additionalArgumentsPair.second.end());
 
     vector<std::unique_ptr<TypedVariable>> functionArguments1;
     std::transform(
-        functionArgumentsPair.first.begin(), functionArgumentsPair.first.end(),
-        std::back_inserter(functionArguments1), typedVariableFromSortedVar);
+            functionArgumentsPair.first.begin(),
+            functionArgumentsPair.first.end(),
+            std::back_inserter(functionArguments1),
+            typedVariableFromSortedVar);
+    vector<std::unique_ptr<TypedVariable>> additionalArguments1;
+    std::transform(
+            additionalArgumentsPair.first.begin(),
+            additionalArgumentsPair.first.end(),
+            std::back_inserter(additionalArguments1),
+            typedVariableFromSortedVar);
     vector<std::unique_ptr<TypedVariable>> functionArguments2;
-    std::transform(functionArgumentsPair.second.begin(),
-                   functionArgumentsPair.second.end(),
-                   std::back_inserter(functionArguments2),
-                   typedVariableFromSortedVar);
+    std::transform(
+            functionArgumentsPair.second.begin(),
+            functionArgumentsPair.second.end(),
+            std::back_inserter(functionArguments2),
+            typedVariableFromSortedVar);
+    vector<std::unique_ptr<TypedVariable>> additionalArguments2;
+    std::transform(
+            additionalArgumentsPair.second.begin(),
+            additionalArgumentsPair.second.end(),
+            std::back_inserter(additionalArguments2),
+            typedVariableFromSortedVar);
 
     if (body == nullptr || additionalIn) {
         assert(functionArguments1.size() == functionArguments2.size());
         vector<SharedSMTRef> equalInputs;
         std::transform(functionArguments1.begin(), functionArguments1.end(),
-                       functionArguments2.begin(), std::back_inserter(equalInputs),
+                       functionArguments2.begin(),
+                       std::back_inserter(equalInputs),
                        [](auto &arg1, auto &arg2) {
                            return argEquality(arg1, arg2);
+                       });
+        std::transform(additionalArguments1.begin(), additionalArguments1.end(),
+                       additionalArguments2.begin(),
+                       std::back_inserter(equalInputs),
+                       [](auto &arg1, auto &arg2) {
+                           return makeOp("=", std::move(arg1), std::move(arg2));
                        });
         if (SMTGenerationOpts::getInstance().BitVect) {
             equalInputs.push_back(makeOp(
@@ -439,7 +474,7 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
         body = make_unique<Op>("and", smtArgs);
     }
 
-    return make_unique<FunDef>("IN_INV", funArgs, boolType(), body);
+    return make_unique<FunDef>("IN_INV", invariantArgs, boolType(), body);
 }
 
 std::unique_ptr<FunDef>
