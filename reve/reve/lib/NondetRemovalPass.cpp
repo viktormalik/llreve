@@ -10,8 +10,6 @@ using namespace llvm;
 
 PreservedAnalyses NondetRemovalPass::run(
         Function &Fun, FunctionAnalysisManager &fam) {
-    std::map<const Type *, Function *> nondetFunctions;
-    unsigned nextNondetFun = 0;
     for (auto &BB : Fun) {
         for (auto &Instr : BB) {
             if (auto PhiNode = dyn_cast<PHINode>(&Instr)) {
@@ -19,24 +17,19 @@ PreservedAnalyses NondetRemovalPass::run(
                     Value *value = PhiNode->getIncomingValue(i);
                     BasicBlock *block = PhiNode->getIncomingBlock(i);
                     if (isa<UndefValue>(value)) {
-                        Type *type = value->getType();
-                        auto FunMapIt = nondetFunctions.find(type);
-                        if (FunMapIt == nondetFunctions.end()) {
-                            Function *newFun = Function::Create(
-                                    FunctionType::get(type, false),
-                                    Function::LinkageTypes::ExternalLinkage,
-                                    "$nondet" +
-                                    std::to_string(nextNondetFun++),
-                                    Fun.getParent());
-                            setNondet(newFun, Fun.getContext());
-                            FunMapIt = nondetFunctions.emplace(
-                                    type, newFun).first;
-                        }
-                        auto newCall = CallInst::Create(FunMapIt->second,
-                                                        {}, "",
-                                                        block->getTerminator());
-                        setNondet(newCall, Fun.getContext());
+                        auto newCall =
+                                replaceNondetByCall(value,
+                                                    block->getTerminator(),
+                                                    Fun.getParent());
                         PhiNode->setIncomingValue(i, newCall);
+                    }
+                }
+            } else {
+                for (auto &Op : Instr.operands()) {
+                    if (isa<UndefValue>(Op)) {
+                        auto newCall = replaceNondetByCall(Op, &Instr,
+                                                           Fun.getParent());
+                        Op = newCall;
                     }
                 }
             }
@@ -53,4 +46,25 @@ void NondetRemovalPass::setNondet(Value *Value, LLVMContext &Context) {
         Instr->setMetadata("is_nondet", M);
     else if (auto Fun = dyn_cast<Function>(Value))
         Fun->setMetadata("is_nondet", M);
+}
+
+Value * NondetRemovalPass::replaceNondetByCall(llvm::Value *toReplace,
+                                               llvm::Instruction *insertBefore,
+                                               llvm::Module *mod) {
+    Type *type = toReplace->getType();
+    auto FunMapIt = nondetFunctions.find(type);
+    if (FunMapIt == nondetFunctions.end()) {
+        Function *newFun = Function::Create(
+                FunctionType::get(type, false),
+                Function::LinkageTypes::ExternalLinkage,
+                "$nondet" +
+                std::to_string(nextNondetFun++),
+                mod);
+        setNondet(newFun, mod->getContext());
+        FunMapIt = nondetFunctions.emplace(
+                type, newFun).first;
+    }
+    auto newCall = CallInst::Create(FunMapIt->second, {}, "", insertBefore);
+    setNondet(newCall, mod->getContext());
+    return newCall;
 }
