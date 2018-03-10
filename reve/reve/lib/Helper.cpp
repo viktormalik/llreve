@@ -224,6 +224,41 @@ std::vector<SortedVar> getResultValues(Program prog,
     return resultValues;
 }
 
+SMTRef argEquality(std::unique_ptr<TypedVariable> &arg1,
+                   std::unique_ptr<TypedVariable> &arg2) {
+    if (arg1->type.getTag() == TypeTag::Int &&
+        arg2->type.getTag() == TypeTag::Int &&
+        arg1->type.unsafeBitWidth() < arg2->type.unsafeBitWidth()) {
+        // Size of an integer argument has increased
+        string opName = "(_ sign_extend " + std::to_string(
+                arg2->type.unsafeBitWidth() - arg1->type.unsafeBitWidth()) +
+                        ")";
+        SMTRef arg1Resized = makeOp(opName, std::move(arg1));
+        return makeOp("=", std::move(arg1Resized), std::move(arg2));
+    }
+    return makeOp("=", std::move(arg1), std::move(arg2));
+}
+
+smt::SMTRef resultEquality(std::unique_ptr<smt::TypedVariable> arg1,
+                           std::unique_ptr<smt::TypedVariable> arg2) {
+    if (arg1->type.getTag() == TypeTag::Int &&
+        arg2->type.getTag() == TypeTag::Int &&
+        arg1->type.unsafeBitWidth() != arg2->type.unsafeBitWidth()) {
+        // Size of an integer argument has increased
+        string opName = "(_ sign_extend " + std::to_string(
+                abs(arg2->type.unsafeBitWidth() -
+                    arg1->type.unsafeBitWidth())) + ")";
+        if (arg1->type.unsafeBitWidth() < arg2->type.unsafeBitWidth()) {
+            SMTRef arg1Resized = makeOp(opName, std::move(arg1));
+            return makeOp("=", std::move(arg1Resized), std::move(arg2));
+        } else {
+            SMTRef arg2Resized = makeOp(opName, std::move(arg2));
+            return makeOp("=", std::move(arg1), std::move(arg2Resized));
+        }
+    }
+    return makeOp("=", std::move(arg1), std::move(arg2));
+}
+
 auto callsTransitively(const llvm::Function &caller,
                        const llvm::Function &callee) -> bool {
     set<const llvm::Function *> visited;

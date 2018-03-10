@@ -572,18 +572,3 @@ void addHeapSelectEquality(std::string largerHeapName,
             ")", std::move(smaller));
     equalities.push_back(makeOp("=", std::move(larger), std::move(smaller)));
 }
-
-SMTRef argEquality(std::unique_ptr<TypedVariable> &arg1,
-                   std::unique_ptr<TypedVariable> &arg2) {
-    if (arg1->type.getTag() == TypeTag::Int &&
-        arg2->type.getTag() == TypeTag::Int &&
-        arg1->type.unsafeBitWidth() < arg2->type.unsafeBitWidth()) {
-        // Size of an integer argument has increased
-        string opName = "(_ sign_extend " + std::to_string(
-                arg2->type.unsafeBitWidth() - arg1->type.unsafeBitWidth()) +
-                        ")";
-        SMTRef arg1Resized = makeOp(opName, std::move(arg1));
-        return makeOp("=", std::move(arg1Resized), std::move(arg2));
-    }
-    return makeOp("=", std::move(arg1), std::move(arg2));
-}

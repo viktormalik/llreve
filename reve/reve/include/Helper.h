@@ -184,6 +184,11 @@ auto getResultValues(Program prog, const llvm::StringRef assignedTo,
                      const llvm::Function &function)
     -> std::vector<smt::SortedVar>;
 
+smt::SMTRef argEquality(std::unique_ptr<smt::TypedVariable> &arg1,
+                        std::unique_ptr<smt::TypedVariable> &arg2);
+smt::SMTRef resultEquality(std::unique_ptr<smt::TypedVariable> arg1,
+                           std::unique_ptr<smt::TypedVariable> arg2);
+
 auto callsTransitively(const llvm::Function &caller,
                        const llvm::Function &callee) -> bool;
 auto calledFunctions(const llvm::Function &f)

@@ -56,8 +56,6 @@ auto outInvariant(MonoPair<std::vector<smt::SortedVar>> funArgs,
 
 auto heapEquality(std::vector<MonoPair<const llvm::GlobalVariable &>> &)
     -> std::unique_ptr<smt::FunDef>;
-smt::SMTRef argEquality(std::unique_ptr<smt::TypedVariable> &arg1,
-                        std::unique_ptr<smt::TypedVariable> &arg2);
 
 void addHeapSelectEquality(std::string largerHeapName,
                            const llvm::Value *largerPointer,

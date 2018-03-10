@@ -116,11 +116,17 @@ void externDeclarations(const llvm::Module &mod1, const llvm::Module &mod2,
     }
 }
 
-static SMTRef equalOutputs(std::string functionName,
+static SMTRef equalOutputs(const llvm::Function &Fun1,
+                           const llvm::Function &Fun2,
                            std::multimap<string, string> funCondMap) {
+    auto return1 = SortedVar(resultName(Program::First),
+                                 llvmType(Fun1.getReturnType()));
+    auto return2 = SortedVar(resultName(Program::Second),
+                                 llvmType(Fun2.getReturnType()));
     std::vector<SharedSMTRef> equalClauses;
     equalClauses.emplace_back(
-        makeOp("=", resultName(Program::First), resultName(Program::Second)));
+            resultEquality(typedVariableFromSortedVar(return1),
+                           typedVariableFromSortedVar(return2)));
     if (SMTGenerationOpts::getInstance().Heap == HeapOpt::Enabled) {
         equalClauses.emplace_back(
             makeOp("=", memoryVariable(heapResultName(Program::First)),
@@ -135,7 +141,7 @@ static SMTRef equalOutputs(std::string functionName,
 
     std::vector<SharedSMTRef> equalOut;
     // TODO remove dependency on a single name
-    auto range = funCondMap.equal_range(functionName);
+    auto range = funCondMap.equal_range(Fun1.getName());
     for (auto i = range.first; i != range.second; ++i) {
         equalOut.push_back(stringExpr(i->second));
     }
@@ -205,7 +211,7 @@ equivalentExternDecls(const llvm::Function &fun1, const llvm::Function &fun2,
                           fun1.getName().str() + "^" + fun2.getName().str(),
                           InvariantAttr::NONE, argNum);
 
-        SMTRef eqOutputs = equalOutputs(fun1.getName(), funCondMap);
+        SMTRef eqOutputs = equalOutputs(fun1, fun2, funCondMap);
         SMTRef eqInputs = equalInputs(fun1, fun2, argNum);
         SMTRef body = makeOp("=>", std::move(eqInputs), std::move(eqOutputs));
 
