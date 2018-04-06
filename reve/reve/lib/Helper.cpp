@@ -73,6 +73,12 @@ SMTRef instrNameOrVal(const llvm::Value *val, const llvm::Type *ty) {
     if (llvm::isa<llvm::GlobalValue>(val)) {
         return stringExpr(val->getName());
     }
+
+    if (llvm::Operator::getOpcode(val) == llvm::Instruction::BitCast) {
+        return instrNameOrVal(
+                llvm::dyn_cast<llvm::Operator>(val)->getOperand(0));
+    }
+
     if (val->getName().empty()) {
         logErrorData("Unnamed variable\n", *val);
         exit(1);
