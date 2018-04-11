@@ -74,9 +74,15 @@ SMTRef instrNameOrVal(const llvm::Value *val, const llvm::Type *ty) {
         return stringExpr(val->getName());
     }
 
-    if (llvm::Operator::getOpcode(val) == llvm::Instruction::BitCast) {
-        return instrNameOrVal(
-                llvm::dyn_cast<llvm::Operator>(val)->getOperand(0));
+    if (!llvm::isa<llvm::Instruction>(val)) {
+        if (llvm::Operator::getOpcode(val) == llvm::Instruction::BitCast)
+            return instrNameOrVal(
+                    llvm::dyn_cast<llvm::Operator>(val)->getOperand(0));
+        if (llvm::Operator::getOpcode(val) == llvm::Instruction::PtrToInt) {
+            auto op = llvm::dyn_cast<llvm::PtrToIntOperator>(val);
+            if (op->getType()->isIntegerTy(64))
+                return instrNameOrVal(op->getPointerOperand());
+        }
     }
 
     if (val->getName().empty()) {
