@@ -25,8 +25,6 @@ llvm::AnalysisKey InferMarksAnalysis::Key;
 
 BidirBlockMarkMap InferMarksAnalysis::run(llvm::Function &Fun,
                                           llvm::FunctionAnalysisManager &am) {
-    std::map<Mark, set<llvm::BasicBlock *>> MarkedBlocks;
-    std::map<llvm::BasicBlock *, set<Mark>> BlockedMarks;
     MarkedBlocks[ENTRY_MARK].insert(&Fun.getEntryBlock());
     BlockedMarks[&Fun.getEntryBlock()].insert(ENTRY_MARK);
     MarkedBlocks[EXIT_MARK].insert(
@@ -34,18 +32,19 @@ BidirBlockMarkMap InferMarksAnalysis::run(llvm::Function &Fun,
     BlockedMarks[am.getResult<FunctionExitNodeAnalysis>(Fun).returnBlock]
         .insert(EXIT_MARK);
     llvm::LoopInfo &loopInfo = am.getResult<llvm::LoopAnalysis>(Fun);
-    int i = 1;
     for (auto loop : loopInfo) {
-        for (auto subLoop : loop->getSubLoops()) {
-            MarkedBlocks.insert({Mark(i), {subLoop->getHeader()}});
-            BlockedMarks.insert({subLoop->getHeader(), {Mark(i)}});
-            ++i;
-        }
-        MarkedBlocks.insert({Mark(i), {loop->getHeader()}});
-        BlockedMarks.insert({loop->getHeader(), {Mark(i)}});
-        ++i;
+        markLoop(loop);
     }
 
     BlockMarkMap = BidirBlockMarkMap(BlockedMarks, MarkedBlocks);
     return BlockMarkMap;
+}
+
+void InferMarksAnalysis::markLoop(llvm::Loop *loop) {
+    for (auto subLoop : loop->getSubLoops()) {
+        markLoop(subLoop);
+    }
+    MarkedBlocks.insert({Mark(nextMark), {loop->getHeader()}});
+    BlockedMarks.insert({loop->getHeader(), {Mark(nextMark)}});
+    nextMark++;
 }

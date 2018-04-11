@@ -16,6 +16,7 @@
 
 #include <map>
 #include <set>
+#include <llvm/Analysis/LoopInfo.h>
 
 class InferMarksAnalysis : public llvm::AnalysisInfoMixin<InferMarksAnalysis> {
   public:
@@ -24,6 +25,13 @@ class InferMarksAnalysis : public llvm::AnalysisInfoMixin<InferMarksAnalysis> {
     // it’s not possible to have non default constructors with the legacy
     // passmanager so we can’t just pass a pointer there to escape this
     BidirBlockMarkMap BlockMarkMap;
+
+  protected:
+    std::map<Mark, std::set<llvm::BasicBlock *>> MarkedBlocks;
+    std::map<llvm::BasicBlock *, std::set<Mark>> BlockedMarks;
+    int nextMark = 1;
+
+    void markLoop(llvm::Loop *loop);
 
   private:
     friend llvm::AnalysisInfoMixin<InferMarksAnalysis>;
