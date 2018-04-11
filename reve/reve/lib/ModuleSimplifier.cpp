@@ -277,8 +277,12 @@ void ModuleSimplifier::markCalleesAlwaysInline(llvm::Function &Fun) {
                     llreve::opts::isLlreveIntrinsic(*CalledFun))
                     continue;
 
-                CalledFun->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
-                markCalleesAlwaysInline(*CalledFun);
+                if (!CalledFun->hasFnAttribute(
+                        llvm::Attribute::AttrKind::AlwaysInline)) {
+                    CalledFun->addFnAttr(
+                            llvm::Attribute::AttrKind::AlwaysInline);
+                    markCalleesAlwaysInline(*CalledFun);
+                }
             }
         }
     }
