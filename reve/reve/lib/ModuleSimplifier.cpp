@@ -33,7 +33,8 @@ llvm::PreservedAnalyses IndependentSimplifyPass::run(
                             "", &Instr);
                     CallInst->replaceAllUsesWith(newCall);
                     toRemove.push_back(&Instr);
-                } else if (CalledFun && CalledFun->getName() == "_dev_info") {
+                } else if (CalledFun && (CalledFun->getName() == "_dev_info" ||
+                                         CalledFun->getName() == "sprintf")) {
                     auto Op0Type = llvm::dyn_cast<llvm::PointerType>(
                             CallInst->getOperand(0)->getType());
                     auto Op1Type = llvm::dyn_cast<llvm::PointerType>(
