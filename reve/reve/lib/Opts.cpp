@@ -354,7 +354,7 @@ bool isIntrinsicSupported(const llvm::Function &Fun){
 bool isHeapAllocation(const llvm::Function &Fun) {
     return Fun.getName() == "malloc" || Fun.getName() == "calloc" ||
            Fun.getName() == "kmalloc" || Fun.getName() == "kzalloc" ||
-           Fun.getName() == "__kmalloc";
+           Fun.getName() == "__kmalloc" || Fun.getName() == "devm_kzalloc";
 }
 
 bool hasMutualFixedAbstraction(MonoPair<const llvm::Function *> functions) {
