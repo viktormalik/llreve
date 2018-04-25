@@ -304,10 +304,12 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     }
 
     for (auto &coupled : SMTGenerationOpts::getInstance().CoupledFunctions) {
-        if (isPassedAsArgument(*coupled.first) &&
-            isPassedAsArgument(*coupled.second)) {
+        if (isPassedAsArgument(*coupled.first, Program::First) &&
+            isPassedAsArgument(*coupled.second, Program::Second)) {
             string nameFirst = string(coupled.first->getName()) + "$1";
+            coupled.first->setName(nameFirst);
             string nameSecond = string(coupled.second->getName()) + "$2";
+            coupled.second->setName(nameSecond);
             std::vector<SortedVar> empty;
             globalPointer += 4;
             auto constDef1 = make_unique<FunDef>(

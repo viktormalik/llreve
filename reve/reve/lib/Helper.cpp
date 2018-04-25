@@ -339,15 +339,26 @@ std::string heapPtrName(std::string allocSiteSuffix, Program prog) {
     return heapPtrName(allocSiteSuffix, programIndex(prog));
 }
 
-bool isPassedAsArgument(const llvm::Function &fun) {
+bool isPassedAsArgument(const llvm::Function &fun, const Program prog) {
+    auto MainFunction = prog == Program::First
+                        ? SMTGenerationOpts::getInstance().MainFunctions.first
+                        : SMTGenerationOpts::getInstance().MainFunctions.second;
     for (auto user : fun.users()) {
-        if (auto CallInst = llvm::dyn_cast<llvm::CallInst>(user)) {
-            for (auto &arg : CallInst->arg_operands()) {
-                if (auto argFun = llvm::dyn_cast<llvm::Function>(&arg)) {
-                    if (argFun == &fun)
-                        return true;
+        if (auto Inst = llvm::dyn_cast<llvm::Instruction>(user)) {
+            auto UserFun = Inst->getParent()->getParent();
+            if (!(MainFunction == UserFun ||
+                  callsTransitively(*MainFunction, *UserFun)))
+                continue;
+
+            if (auto CallInst = llvm::dyn_cast<llvm::CallInst>(user)) {
+                for (auto &arg : CallInst->arg_operands()) {
+                    if (auto argFun = llvm::dyn_cast<llvm::Function>(&arg)) {
+                        if (argFun == &fun)
+                            return true;
+                    }
                 }
-            }
+            } else
+                return true;
         }
     }
     return false;
