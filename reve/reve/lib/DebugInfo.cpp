@@ -102,6 +102,9 @@ void DebugInfo::calculateGEPIndexAlignments() {
                             // the first module
                             auto TypeDIFirst =
                                     getStructTypeInfo(typeName, Program::First);
+                            if (!TypeDIFirst)
+                                continue;
+
                             StringRef elementName =
                                     getElementNameAtIndex(*TypeDIFirst,
                                                           indexFirst);
@@ -111,6 +114,9 @@ void DebugInfo::calculateGEPIndexAlignments() {
                             auto TypeDISecond =
                                     getStructTypeInfo(typeName,
                                                       Program::Second);
+                            if (!TypeDISecond)
+                                continue;
+
                             int indexSecond =
                                     getTypeMemberIndex(*TypeDISecond,
                                                        elementName);
