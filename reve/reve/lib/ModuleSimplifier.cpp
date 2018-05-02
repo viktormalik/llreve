@@ -258,6 +258,7 @@ void ModuleSimplifier::inlineCalled(llvm::Module &Mod, llvm::Function &Fun) {
     llvm::PassBuilder pb;
     pb.registerModuleAnalyses(mam);
     mpm.addPass(llvm::AlwaysInlinerPass {});
+    mpm.addPass(RemoveLifetimeCallsPass {});
     mpm.run(Mod, mam);
 
     llvm::errs() << "Function " << Fun.getName() << " after inlining:\n";
@@ -307,4 +308,30 @@ uint64_t DifferentialGlobalNumberState::getNumber(llvm::GlobalValue *value) {
     }
 
     return result;
+}
+
+llvm::PreservedAnalyses RemoveLifetimeCallsPass::run(
+        llvm::Module &Mod,
+        llvm::ModuleAnalysisManager &mam) {
+    std::vector<llvm::Instruction *> toRemove;
+    for (auto &Fun : Mod) {
+        for (auto &BB : Fun) {
+            for (auto &Instr : BB) {
+                if (auto CallInstr = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
+                    auto fun = CallInstr->getCalledFunction();
+                    if (!fun)
+                        continue;
+                    auto name = fun->getName();
+                    // TODO: this should work with Instr.getIntrinsicID()
+                    if (name.find("llvm.lifetime.start") != std::string::npos ||
+                        name.find("llvm.lifetime.end") != std::string::npos) {
+                        toRemove.push_back(&Instr);
+                    }
+                }
+            }
+        }
+    }
+    for (auto Instr : toRemove)
+        Instr->eraseFromParent();
+    return llvm::PreservedAnalyses();
 }

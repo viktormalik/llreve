@@ -105,3 +105,10 @@ protected:
                  const std::string srcHash,
                  const std::string destName);
 };
+
+class RemoveLifetimeCallsPass
+        : public llvm::PassInfoMixin<RemoveLifetimeCallsPass> {
+  public:
+    llvm::PreservedAnalyses run(llvm::Module &Mod,
+                                llvm::ModuleAnalysisManager &mam);
+};
