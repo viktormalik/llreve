@@ -649,6 +649,8 @@ vector<DefOrCallInfo> memcpyIntrinsic(const llvm::CallInst *callInst,
                 instrNameOrVal(callInst->getArgOperand(1));
             string heapNameSelect = heapName(prog);
             string heapNameStore = heapName(prog);
+            string addOp = SMTGenerationOpts::getInstance().BitVect ? "bvadd"
+                                                                    : "+";
             int i = 0;
             for (const auto elTy : StructTy0->elements()) {
                 SharedSMTRef heapSelect = memoryVariable(heapNameSelect);
@@ -657,11 +659,11 @@ vector<DefOrCallInfo> memcpyIntrinsic(const llvm::CallInst *callInst,
                      j < typeSize(elTy, callInst->getModule()->getDataLayout());
                      ++j) {
                     SMTRef select = makeOp("select", heapSelect,
-                                           makeOp("+", basePointerSrc,
+                                           makeOp(addOp, basePointerSrc,
                                                   std::make_unique<ConstantInt>(
                                                       llvm::APInt(64, i))));
                     const vector<SharedSMTRef> args = {
-                        heapStore, makeOp("+", basePointerDest,
+                        heapStore, makeOp(addOp, basePointerDest,
                                           std::make_unique<ConstantInt>(
                                               llvm::APInt(64, i))),
                         std::move(select)};
