@@ -13,6 +13,7 @@
 #include <llvm/Transforms/Scalar/DCE.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <Opts.h>
+#include <Helper.h>
 
 llvm::PreservedAnalyses IndependentSimplifyPass::run(
         llvm::Function &Fun,
@@ -132,7 +133,7 @@ FunctionAbstractionsGenerator::Result FunctionAbstractionsGenerator::run(
 }
 
 std::string FunctionAbstractionsGenerator::FunHash(llvm::Value *Fun) {
-    std::string result = typeToStr(Fun->getType());
+    std::string result = typeName(Fun->getType());
     if (auto inlineAsm = llvm::dyn_cast<llvm::InlineAsm>(Fun)) {
         result += "$" + inlineAsm->getAsmString() + "$" +
                   inlineAsm->getConstraintString();
@@ -145,13 +146,6 @@ std::string FunctionAbstractionsGenerator::abstractionPrefix(llvm::Value *Fun) {
         return "llreve__inlineasm$";
     else
         return "llreve__indirect$";
-}
-
-const std::string typeToStr(const llvm::Type *Type) {
-    std::string result;
-    llvm::raw_string_ostream rso(result);
-    Type->print(rso);
-    return rso.str();
 }
 
 std::set<MonoPair<llvm::Function *>> ModuleSimplifier::simplifyModules() {

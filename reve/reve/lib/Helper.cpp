@@ -363,3 +363,17 @@ bool isPassedAsArgument(const llvm::Function &fun, const Program prog) {
     }
     return false;
 }
+
+std::string typeName(const llvm::Type *Type) {
+    std::string result;
+    llvm::raw_string_ostream rso(result);
+    Type->print(rso);
+    rso.str();
+    // We must do some modifications to the type name so that is is usable as
+    // a Z3 variable
+    result.erase(std::remove(result.begin(), result.end(), ' '), result.end());
+    std::replace(result.begin(), result.end(), '(', '$');
+    std::replace(result.begin(), result.end(), ')', '$');
+    std::replace(result.begin(), result.end(), ',', '_');
+    return result;
+}

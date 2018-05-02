@@ -170,6 +170,8 @@ auto heapPtrName(int allocSiteIndex, Program prog) -> std::string;
 auto heapPtrName(std::string allocSiteSuffix, Program prog) -> std::string;
 auto heapPtrName(std::string allocSiteSuffix, int progIndex) -> std::string;
 
+auto typeName(const llvm::Type *Type) -> std::string;
+
 std::vector<std::string> &split(const std::string &s, char delim,
                                 std::vector<std::string> &elems);
 std::vector<std::string> split(const std::string &s, char delim);

@@ -105,5 +105,3 @@ protected:
                  const std::string srcHash,
                  const std::string destName);
 };
-
-const std::string typeToStr(const llvm::Type *Type);
