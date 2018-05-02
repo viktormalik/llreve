@@ -4,8 +4,9 @@
 #include "SMT.h"
 
 #include "llvm/IR/Module.h"
+#include "VarArgs.h"
 
-auto getVarArgs(const llvm::Function &fun) -> std::set<uint32_t>;
+auto getVarArgLists(const llvm::Function &fun) -> std::set<VarArgs>;
 auto externDeclarations(const llvm::Module &mod1, const llvm::Module &mod2,
                         std::vector<smt::SharedSMTRef> &declarations,
                         std::multimap<std::string, std::string> funCondMap)

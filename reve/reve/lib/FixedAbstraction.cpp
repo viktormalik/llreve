@@ -17,22 +17,30 @@ using std::vector;
 using namespace smt;
 using namespace llreve::opts;
 
-std::set<uint32_t> getVarArgs(const llvm::Function &fun) {
-    std::set<uint32_t> varArgs;
+std::set<VarArgs> getVarArgLists(const llvm::Function &fun) {
+    std::set<VarArgs> varArgLists;
     for (auto User : fun.users()) {
         if (const auto callInst = llvm::dyn_cast<llvm::CallInst>(User)) {
-            varArgs.insert(callInst->getNumArgOperands() -
-                           fun.getFunctionType()->getNumParams());
+            VarArgs varArgs;
+            for (unsigned i = fun.getFunctionType()->getNumParams();
+                 i < callInst->getNumArgOperands(); ++i) {
+                varArgs.argTypes.push_back(
+                        callInst->getArgOperand(i)->getType());
+            }
+            varArgLists.insert(varArgs);
         } else {
             logWarningData("Unsupported use of function\n", *User);
         }
     }
-    return varArgs;
+    return varArgLists;
 }
 
 static void appendExternInputArgs(const llvm::Function &fun, Program progIndex,
-                                  std::vector<SortedVar> &args) {
+                                 const VarArgs &varArgs,
+                                 std::vector<SortedVar> &args) {
     auto funArgs = functionArgs(fun);
+    auto varArgVars = varArgs.toSortedVars();
+    funArgs.insert(funArgs.end(), varArgVars.begin(), varArgVars.end());
     args.insert(args.end(), funArgs.begin(), funArgs.end());
     if (SMTGenerationOpts::getInstance().Heap == HeapOpt::Enabled) {
         args.emplace_back(heapName(progIndex), memoryType());
@@ -43,12 +51,13 @@ static void appendExternInputArgs(const llvm::Function &fun, Program progIndex,
     }
 }
 
-static std::vector<SortedVar> externDeclArgs(const llvm::Function &fun1,
-                                             const llvm::Function &fun2,
-                                             unsigned numberOfArguments) {
+static std::vector<SortedVar> externDeclArgs(
+        const llvm::Function &fun1,
+        const llvm::Function &fun2,
+        const VarArgs& varArgs) {
     std::vector<SortedVar> args;
-    appendExternInputArgs(fun1, Program::First, args);
-    appendExternInputArgs(fun2, Program::Second, args);
+    appendExternInputArgs(fun1, Program::First, varArgs, args);
+    appendExternInputArgs(fun2, Program::Second, varArgs, args);
     auto resultValues = getMutualResultValues(
         resultName(Program::First), fun1, resultName(Program::Second), fun2);
     args.insert(args.end(), resultValues.begin(), resultValues.end());
@@ -154,10 +163,14 @@ static SMTRef equalOutputs(const llvm::Function &Fun1,
 
 static SMTRef equalInputs(const llvm::Function &fun1,
                           const llvm::Function &fun2,
-                          unsigned numberOfArguments) {
+                          const VarArgs &varArgs) {
     std::vector<SharedSMTRef> equal;
     auto funArgs1 = functionArgs(fun1);
+    auto varArgs1 = varArgs.toSortedVars();
+    funArgs1.insert(funArgs1.end(), varArgs1.begin(), varArgs1.end());
     auto funArgs2 = functionArgs(fun2);
+    auto varArgs2 = varArgs.toSortedVars();
+    funArgs2.insert(funArgs2.end(), varArgs2.begin(), varArgs2.end());
     assert(funArgs1.size() == funArgs2.size());
     std::transform(funArgs1.begin(), funArgs1.end(), funArgs2.begin(),
                    std::back_inserter(equal),
@@ -199,20 +212,20 @@ std::vector<std::unique_ptr<smt::SMTExpr>>
 equivalentExternDecls(const llvm::Function &fun1, const llvm::Function &fun2,
                       std::multimap<string, string> funCondMap) {
     vector<std::unique_ptr<smt::SMTExpr>> declarations;
-    set<uint32_t> varArgs = getVarArgs(fun1);
-    set<uint32_t> varArgs2 = getVarArgs(fun2);
-    for (auto el : varArgs2) {
-        varArgs.insert(el);
-    }
-    for (const auto argNum : varArgs) {
-        vector<SortedVar> args = externDeclArgs(fun1, fun2, argNum);
+    auto varArgSets1 = getVarArgLists(fun1);
+    auto varArgSets2 = getVarArgLists(fun2);
+    for (const auto varArgs : varArgSets1) {
+        if (varArgSets2.find(varArgs) == varArgSets2.end())
+            continue;
+
+        vector<SortedVar> args = externDeclArgs(fun1, fun2, varArgs);
         std::string funName =
             invariantName(ENTRY_MARK, ProgramSelection::Both,
                           fun1.getName().str() + "^" + fun2.getName().str(),
-                          InvariantAttr::NONE, argNum);
+                          InvariantAttr::NONE, &varArgs);
 
         SMTRef eqOutputs = equalOutputs(fun1, fun2, funCondMap);
-        SMTRef eqInputs = equalInputs(fun1, fun2, argNum);
+        SMTRef eqInputs = equalInputs(fun1, fun2, varArgs);
         SMTRef body = makeOp("=>", std::move(eqInputs), std::move(eqOutputs));
 
         if (fun1.getMetadata("is_nondet")) {
@@ -231,17 +244,17 @@ std::vector<std::unique_ptr<smt::SMTExpr>>
 notEquivalentExternDecls(const llvm::Function &fun1,
                          const llvm::Function &fun2) {
     vector<std::unique_ptr<smt::SMTExpr>> declarations;
-    set<uint32_t> varArgs = getVarArgs(fun1);
-    set<uint32_t> varArgs2 = getVarArgs(fun2);
-    for (auto el : varArgs2) {
-        varArgs.insert(el);
-    }
-    for (const auto argNum : varArgs) {
-        vector<SortedVar> args = externDeclArgs(fun1, fun2, argNum);
+    auto varArgLists1 = getVarArgLists(fun1);
+    auto varArgLists2 = getVarArgLists(fun2);
+    for (const auto varArgs : varArgLists1) {
+        if (varArgLists2.find(varArgs) == varArgLists2.end())
+            continue;
+
+        vector<SortedVar> args = externDeclArgs(fun1, fun2, varArgs);
         std::string funName =
             invariantName(ENTRY_MARK, ProgramSelection::Both,
                           fun1.getName().str() + "^" + fun2.getName().str(),
-                          InvariantAttr::NONE, argNum);
+                          InvariantAttr::NONE, &varArgs);
         SMTRef body;
         if (fun1.getMetadata("is_nondet")) {
             body = equalHeap();
@@ -258,9 +271,11 @@ notEquivalentExternDecls(const llvm::Function &fun1,
 std::vector<std::unique_ptr<smt::SMTExpr>>
 externFunDecl(const llvm::Function &fun, Program program) {
     std::vector<std::unique_ptr<smt::SMTExpr>> decls;
-    set<uint32_t> varArgs = getVarArgs(fun);
-    for (auto argNum : varArgs) {
+    auto varArgLists = getVarArgLists(fun);
+    for (auto varArgList : varArgLists) {
         std::vector<SortedVar> args = functionArgs(fun);
+        std::vector<SortedVar> varArgs = varArgList.toSortedVars();
+        args.insert(args.end(), varArgs.begin(), varArgs.end());
         if (SMTGenerationOpts::getInstance().Heap == HeapOpt::Enabled) {
             args.push_back(SortedVar("HEAP", memoryType()));
         }
@@ -272,7 +287,7 @@ externFunDecl(const llvm::Function &fun, Program program) {
         args.insert(args.end(), resultValues.begin(), resultValues.end());
         std::string funName =
             invariantName(ENTRY_MARK, asSelection(program), fun.getName().str(),
-                          InvariantAttr::NONE, argNum);
+                          InvariantAttr::NONE, &varArgList);
         SMTRef body;
         if (fun.getMetadata("is_nondet") &&
             SMTGenerationOpts::getInstance().Heap == HeapOpt::Enabled) {

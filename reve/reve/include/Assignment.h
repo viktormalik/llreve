@@ -12,6 +12,7 @@
 
 #include "Program.h"
 #include "SMT.h"
+#include <VarArgs.h>
 
 #include "llvm/IR/Instructions.h"
 
@@ -23,10 +24,10 @@ struct CallInfo {
     std::string assignedTo;
     std::string callName;
     std::vector<smt::SharedSMTRef> args;
-    unsigned varArgs;
+    VarArgs varArgs;
     const llvm::Function &fun;
     CallInfo(std::string assignedTo, std::string callName,
-             std::vector<smt::SharedSMTRef> args, unsigned varArgs,
+             std::vector<smt::SharedSMTRef> args, VarArgs varArgs,
              const llvm::Function &fun)
         : assignedTo(assignedTo), callName(callName), args(args),
           varArgs(varArgs), fun(fun) {}

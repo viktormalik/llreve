@@ -18,6 +18,8 @@
 #include "Program.h"
 #include "SMT.h"
 
+class VarArgs;
+
 enum class InvariantAttr { MAIN, PRE, NONE };
 
 auto functionalCouplingPredicate(Mark StartIndex, Mark EndIndex,
@@ -42,7 +44,7 @@ auto mainInvariantDeclaration(Mark BlockIndex,
     -> smt::SMTRef;
 auto invariantName(Mark Index, ProgramSelection For, std::string FunName,
                    InvariantAttr attr = InvariantAttr::NONE,
-                   uint32_t VarArgs = 0) -> std::string;
+                   const VarArgs *varArgs = nullptr) -> std::string;
 
 auto invariantArgs(std::vector<smt::SortedVar> freeVars, ProgramSelection prog,
                    InvariantAttr attr) -> size_t;

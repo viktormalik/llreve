@@ -12,6 +12,7 @@
 
 #include "Helper.h"
 #include "Opts.h"
+#include "VarArgs.h"
 
 using std::make_unique;
 using std::vector;
@@ -252,7 +253,7 @@ mainInvariantDeclaration(Mark BlockIndex, vector<SortedVar> FreeVars,
 
 /// Return the invariant name, special casing the entry block
 string invariantName(Mark Index, ProgramSelection For, std::string FunName,
-                     InvariantAttr attr, uint32_t VarArgs) {
+                     InvariantAttr attr, const VarArgs *varArgs) {
     string Name;
     if (attr == InvariantAttr::MAIN) {
         Name = "INV_MAIN";
@@ -265,8 +266,8 @@ string invariantName(Mark Index, ProgramSelection For, std::string FunName,
         }
     }
 
-    if (VarArgs > 0) {
-        Name += "_" + std::to_string(VarArgs) + "varargs";
+    if (varArgs && varArgs->argTypes.size() > 0) {
+        Name += std::string("$") + "varargs" + varArgs->name();
     }
     if (For == ProgramSelection::First) {
         Name += "__1";

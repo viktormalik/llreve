@@ -36,7 +36,7 @@ slicingAssertion(MonoPair<llvm::Function *> funPair,
         .indexedForEachProgram([&assertions](auto funArgs, auto program) {
             std::string invName =
                 invariantName(ENTRY_MARK, asSelection(program), "__criterion",
-                              InvariantAttr::PRE, 0);
+                              InvariantAttr::PRE);
             assertions.push_back(
                 make_shared<FunDef>(invName, funArgs, boolType(),
                                     make_unique<ConstantBool>(false)));
@@ -53,7 +53,7 @@ slicingAssertion(MonoPair<llvm::Function *> funPair,
 
     std::unique_ptr<SMTExpr> allEqual = make_unique<Op>("and", equalArgs);
     name = invariantName(ENTRY_MARK, ProgramSelection::Both, "__criterion",
-                         InvariantAttr::PRE, 0);
+                         InvariantAttr::PRE);
     assertions.push_back(
         make_unique<FunDef>(name, args, boolType(), std::move(allEqual)));
 
@@ -65,7 +65,7 @@ slicingAssertion(MonoPair<llvm::Function *> funPair,
 
     std::shared_ptr<SMTExpr> invBody = make_unique<ConstantBool>(true);
     name = invariantName(ENTRY_MARK, ProgramSelection::Both, "__criterion",
-                         InvariantAttr::NONE, 0);
+                         InvariantAttr::NONE);
     assertions.push_back(make_unique<FunDef>(name, args, boolType(), invBody));
 
     makeMonoPair(funArgs1, funArgs2)
@@ -75,7 +75,7 @@ slicingAssertion(MonoPair<llvm::Function *> funPair,
                 "ret" + std::to_string(programIndex(program)), int64Type()));
             std::string invName =
                 invariantName(ENTRY_MARK, asSelection(program), "__criterion",
-                              InvariantAttr::NONE, 0);
+                              InvariantAttr::NONE);
             assertions.push_back(
                 make_shared<FunDef>(invName, funArgs, boolType(), invBody));
         });

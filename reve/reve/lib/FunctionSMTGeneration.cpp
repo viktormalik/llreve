@@ -560,7 +560,6 @@ nonmutualSMT(std::unique_ptr<smt::SMTExpr> endClause,
 
 SMTRef mutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
                           MonoPair<CallInfo> callPair) {
-    const uint32_t varArgs = callPair.first.varArgs;
     const vector<SortedVar> resultValues =
         getMutualResultValues(callPair.first.assignedTo, callPair.first.fun,
                               callPair.second.assignedTo, callPair.second.fun);
@@ -570,7 +569,7 @@ SMTRef mutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
     SMTRef preInvariant = std::make_unique<Op>(
         invariantName(ENTRY_MARK, ProgramSelection::Both,
                       callPair.first.callName + "^" + callPair.second.callName,
-                      InvariantAttr::PRE),
+                      InvariantAttr::PRE, &callPair.first.varArgs),
         preInvariantArguments);
 
     vector<SharedSMTRef> postInvariantArguments = preInvariantArguments;
@@ -580,7 +579,7 @@ SMTRef mutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
     SMTRef postInvariant = std::make_unique<Op>(
         invariantName(ENTRY_MARK, ProgramSelection::Both,
                       callPair.first.callName + "^" + callPair.second.callName,
-                      InvariantAttr::NONE, varArgs),
+                      InvariantAttr::NONE, &callPair.first.varArgs),
         postInvariantArguments, !hasFixedAbstraction(callPair.first.fun));
 
     SMTRef result = makeOp("=>", std::move(postInvariant), std::move(clause));
@@ -594,7 +593,6 @@ SMTRef mutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
 
 SMTRef nonMutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
                              CallInfo call, Program prog) {
-    const uint32_t varArgs = call.varArgs;
     vector<SortedVar> resultValues =
         getResultValues(prog, call.assignedTo, call.fun);
 
@@ -602,7 +600,8 @@ SMTRef nonMutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
     addMemory(preInvariantArguments)(call, programIndex(prog));
     SMTRef preInvariant =
         make_unique<Op>(invariantName(ENTRY_MARK, asSelection(prog),
-                                      call.callName, InvariantAttr::PRE),
+                                      call.callName, InvariantAttr::PRE,
+                                      &call.varArgs),
                         preInvariantArguments);
 
     vector<SharedSMTRef> postInvariantArguments = preInvariantArguments;
@@ -611,7 +610,7 @@ SMTRef nonMutualFunctionCall(std::unique_ptr<smt::SMTExpr> clause,
                    typedVariableFromSortedVar);
     SMTRef postInvariant = make_unique<Op>(
         invariantName(ENTRY_MARK, asSelection(prog), call.callName,
-                      InvariantAttr::NONE, varArgs),
+                      InvariantAttr::NONE, &call.varArgs),
         postInvariantArguments, !hasFixedAbstraction(call.fun));
 
     SMTRef result = makeOp("=>", std::move(postInvariant), std::move(clause));

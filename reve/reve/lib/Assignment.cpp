@@ -690,20 +690,21 @@ unique_ptr<CallInfo> toCallInfo(string assignedTo, Program prog,
         assignedTo = "res" + std::to_string(programIndex(prog));
     }
     uint32_t i = 0;
-    unsigned suppliedArgs = 0;
     const auto &funTy = *callInst.getFunctionType();
     const llvm::Function &fun = *callInst.getCalledFunction();
+    VarArgs varArgs;
     for (auto &arg : callInst.arg_operands()) {
-        args.push_back(instrNameOrVal(arg, funTy.getParamType(i)));
-        ++suppliedArgs;
+        args.push_back(instrNameOrVal(arg, arg->getType()));
         if (SMTGenerationOpts::getInstance().Stack == StackOpt::Enabled &&
             arg->getType()->isPointerTy()) {
             args.push_back(instrLocation(arg));
         }
+
+        if (i >= funTy.getNumParams())
+            varArgs.argTypes.push_back(arg->getType());
         ++i;
     }
-    unsigned varargs = suppliedArgs - funTy.getNumParams();
-    return std::make_unique<CallInfo>(assignedTo, fun.getName(), args, varargs,
+    return std::make_unique<CallInfo>(assignedTo, fun.getName(), args, varArgs,
                                       fun);
 }
 
