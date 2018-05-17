@@ -201,8 +201,8 @@ SMTRef store_Declaration() {
 vector<SharedSMTRef> globalDeclarationsForMod(
         int globalPointer,
         const llvm::Module &mod,
-        set<const llvm::GlobalVariable *> &coveredGlobals,
-        int program) {
+        set<const llvm::GlobalValue *> &coveredGlobals,
+        Program program) {
     std::vector<SharedSMTRef> declarations;
     for (auto &global1 : mod.globals()) {
         std::string globalName = global1.getName();
@@ -219,6 +219,18 @@ vector<SharedSMTRef> globalDeclarationsForMod(
             declarations.push_back(std::move(constDef1));
         }
     }
+    for (auto &function : mod) {
+        if (isPassedAsArgument(function, program) &&
+            coveredGlobals.find(&function) == coveredGlobals.end()) {
+            globalPointer += 4;
+            std::vector<SortedVar> empty;
+            auto constDef = make_unique<FunDef>(
+                    function.getName().str(), empty, int64Type(),
+                    std::make_unique<ConstantInt>(
+                            llvm::APInt(64, -globalPointer, true)));
+            declarations.push_back(std::move(constDef));
+        }
+    }
     return declarations;
 }
 
@@ -228,8 +240,8 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     // same pointer, then match globals that only exist in one module
     std::vector<SharedSMTRef> declarations;
     std::vector<MonoPair<const llvm::GlobalVariable &>> resizedGlobals;
-    std::set<const llvm::GlobalVariable *> coveredGlobals1;
-    std::set<const llvm::GlobalVariable *> coveredGlobals2;
+    std::set<const llvm::GlobalValue *> coveredGlobals1;
+    std::set<const llvm::GlobalValue *> coveredGlobals2;
     int globalPointer = 1;
     for (auto &global1 : mod1.globals()) {
         std::string globalName = global1.getName();
@@ -306,6 +318,8 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     for (auto &coupled : SMTGenerationOpts::getInstance().CoupledFunctions) {
         if (isPassedAsArgument(*coupled.first, Program::First) &&
             isPassedAsArgument(*coupled.second, Program::Second)) {
+            coveredGlobals1.insert(coupled.first);
+            coveredGlobals2.insert(coupled.second);
             string nameFirst = string(coupled.first->getName()) + "$1";
             coupled.first->setName(nameFirst);
             string nameSecond = string(coupled.second->getName()) + "$2";
@@ -326,9 +340,9 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
     }
 
     auto decls1 = globalDeclarationsForMod(globalPointer, mod1,
-                                           coveredGlobals1, 1);
+                                           coveredGlobals1, Program::First);
     auto decls2 = globalDeclarationsForMod(globalPointer, mod2,
-                                           coveredGlobals2, 2);
+                                           coveredGlobals2, Program::Second);
     declarations.insert(declarations.end(), decls1.begin(), decls1.end());
     declarations.insert(declarations.end(), decls2.begin(), decls2.end());
     if (SMTGenerationOpts::getInstance().BitVect) {
