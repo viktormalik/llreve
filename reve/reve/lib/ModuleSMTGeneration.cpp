@@ -219,6 +219,8 @@ vector<SharedSMTRef> globalDeclarationsForMod(
             declarations.push_back(std::move(constDef1));
         }
     }
+    // Functions passed as arguments to instructions are treated the same way as
+    // global variables
     for (auto &function : mod) {
         if (isPassedAsArgument(function, program) &&
             coveredGlobals.find(&function) == coveredGlobals.end()) {
@@ -315,6 +317,8 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
         }
     }
 
+    // Functions passed as arguments to instructions are treated the same way
+    // as global variables
     for (auto &coupled : SMTGenerationOpts::getInstance().CoupledFunctions) {
         if (isPassedAsArgument(*coupled.first, Program::First) &&
             isPassedAsArgument(*coupled.second, Program::Second)) {

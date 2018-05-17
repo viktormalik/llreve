@@ -18,6 +18,10 @@ const std::regex HEAP_REGEX =
 const std::regex INDEX_REGEX =
     std::regex("^i(1|2)(_res|_old|_stack)?$", std::regex::ECMAScript);
 
+/*
+ * Analysis of allocation sites of a function. These sites are then synchronised
+ * between modules to return the same pointer.
+ */
 class AllocationSiteAnalysis
         : public llvm::AnalysisInfoMixin<AllocationSiteAnalysis> {
   public:

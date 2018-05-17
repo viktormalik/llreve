@@ -17,7 +17,7 @@
 
 /*
  * Pass doing simplification that is independent for each function.
- * Currently removes arguments of printk function calls.
+ * Currently removes arguments of printing function calls.
  */
 class IndependentSimplifyPass
         : public llvm::PassInfoMixin<IndependentSimplifyPass> {
@@ -38,7 +38,7 @@ public:
     Result run(llvm::Module &Module, llvm::ModuleAnalysisManager &mam);
 
 protected:
-    std::string FunHash(llvm::Value *Fun);
+    std::string funHash(llvm::Value *Fun);
     std::string abstractionPrefix(llvm::Value *Fun);
 
 private:
@@ -106,6 +106,9 @@ protected:
                  const std::string destName);
 };
 
+/*
+ * Pass for removing llvm.lifetime.start and llvm.lifetime.end functions
+ */
 class RemoveLifetimeCallsPass
         : public llvm::PassInfoMixin<RemoveLifetimeCallsPass> {
   public:

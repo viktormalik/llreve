@@ -24,7 +24,8 @@ llvm::PreservedAnalyses IndependentSimplifyPass::run(
             if (auto CallInst = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
                 auto CalledFun = CallInst->getCalledFunction();
 
-                // Remove arguments of printk
+                // Remove arguments of printk, _dev_info, dev_warn, dev_err,
+                // sprintf
                 if (CalledFun && CalledFun->getName() == "printk") {
                     auto OpType = llvm::dyn_cast<llvm::PointerType>(
                             CallInst->getOperand(0)->getType());
@@ -86,8 +87,8 @@ FunctionAbstractionsGenerator::Result FunctionAbstractionsGenerator::run(
                             llvm::dyn_cast<llvm::PointerType>(
                                     CalledType)->getElementType());
 
-                    std::string funHash = FunHash(CallInstr->getCalledValue());
-                    auto funAbstr = funAbstractions.find(funHash);
+                    std::string hash = funHash(CallInstr->getCalledValue());
+                    auto funAbstr = funAbstractions.find(hash);
                     llvm::Function *newFun;
 
                     if (funAbstr == funAbstractions.end()) {
@@ -105,7 +106,7 @@ FunctionAbstractionsGenerator::Result FunctionAbstractionsGenerator::run(
                                 newFunType,
                                 llvm::Function::ExternalLinkage,
                                 funName, &Module);
-                        funAbstractions.try_emplace(funHash, newFun);
+                        funAbstractions.try_emplace(hash, newFun);
                     } else {
                         newFun = funAbstr->second;
                     }
@@ -132,7 +133,12 @@ FunctionAbstractionsGenerator::Result FunctionAbstractionsGenerator::run(
     return funAbstractions;
 }
 
-std::string FunctionAbstractionsGenerator::FunHash(llvm::Value *Fun) {
+/*
+ * A hash that uniquely identifies indirect function or inline asm.
+ * It contains the string representing the function type, and for inline asm
+ * also assembly params and code.
+ */
+std::string FunctionAbstractionsGenerator::funHash(llvm::Value *Fun) {
     std::string result = typeName(Fun->getType());
     if (auto inlineAsm = llvm::dyn_cast<llvm::InlineAsm>(Fun)) {
         result += "$" + inlineAsm->getAsmString() + "$" +

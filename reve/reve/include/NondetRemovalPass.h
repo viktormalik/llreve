@@ -1,6 +1,11 @@
-//
-// Created by vmalik on 1/25/18.
-//
+/*
+ * Pass for removing 'undef' values from the LLVM IR
+ *
+ * Created by Viktor Malik (vmalik@redhat.com)
+ *
+ * Published under Apache 2.0 license.
+ * See LICENSE for details.
+ */
 
 #pragma once
 

@@ -339,6 +339,9 @@ std::string heapPtrName(std::string allocSiteSuffix, Program prog) {
     return heapPtrName(allocSiteSuffix, programIndex(prog));
 }
 
+/*
+ * Check if a function is passed as an argument to some instruction
+ */
 bool isPassedAsArgument(const llvm::Function &fun, const Program prog) {
     auto MainFunction = prog == Program::First
                         ? SMTGenerationOpts::getInstance().MainFunctions.first
