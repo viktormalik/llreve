@@ -35,7 +35,9 @@ public:
     typedef llvm::StringMap<llvm::Function *> FunMap;
     using Result = FunMap;
 
-    Result run(llvm::Module &Module, llvm::ModuleAnalysisManager &mam);
+    Result run(llvm::Module &Module,
+               llvm::AnalysisManager<llvm::Module, llvm::Function *> &mam,
+               llvm::Function *Main);
 
 protected:
     std::string funHash(llvm::Value *Fun);
@@ -83,7 +85,8 @@ public:
             : First(First), Second(Second),
               FirstMain(FirstMain), SecondMain(SecondMain) {}
 
-    std::set<MonoPair<llvm::Function *>> simplifyModules();
+    std::set<MonoPair<llvm::Function *>> simplifyModules(
+            MonoPair<llvm::Function *> &MainFunctions);
 
 protected:
     llvm::Module &First;

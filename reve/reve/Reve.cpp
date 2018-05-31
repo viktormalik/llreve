@@ -236,7 +236,7 @@ int main(int argc, const char **argv) {
 
     ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second,
                                    *MainFunctions.first, *MainFunctions.second);
-    auto funAbstractions = modSimplifier.simplifyModules();
+    auto funAbstractions = modSimplifier.simplifyModules(MainFunctions);
 
     SMTGenerationOpts::initialize(
         MainFunctions,

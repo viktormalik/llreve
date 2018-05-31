@@ -69,12 +69,15 @@ llvm::AnalysisKey FunctionAbstractionsGenerator::Key;
  */
 FunctionAbstractionsGenerator::Result FunctionAbstractionsGenerator::run(
         llvm::Module &Module,
-        llvm::ModuleAnalysisManager &mam) {
+        llvm::AnalysisManager<llvm::Module, llvm::Function *> &mam,
+        llvm::Function *Main) {
     FunMap funAbstractions;
     int i = 0;
     std::vector<llvm::Instruction *> toErase;
 
     for (auto &Fun : Module) {
+        if (!(&Fun == Main || callsTransitively(*Main, Fun)))
+            continue;
         for (auto &BB : Fun) {
             for (auto &Instr : BB) {
                 if (auto CallInstr = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
@@ -154,20 +157,30 @@ std::string FunctionAbstractionsGenerator::abstractionPrefix(llvm::Value *Fun) {
         return "llreve__indirect$";
 }
 
-std::set<MonoPair<llvm::Function *>> ModuleSimplifier::simplifyModules() {
+std::set<MonoPair<llvm::Function *>> ModuleSimplifier::simplifyModules(
+        MonoPair<llvm::Function *> &MainFunctions) {
     runIndependentPasses(First);
     runIndependentPasses(Second);
 
-    llvm::ModuleAnalysisManager mam(false);
+    llvm::AnalysisManager<llvm::Module, llvm::Function *> mam(false);
     mam.registerPass([] { return FunctionAbstractionsGenerator(); });
 
     auto abstractionCouples = unifyFunctionAbstractions(
-            mam.getResult<FunctionAbstractionsGenerator>(First),
-            mam.getResult<FunctionAbstractionsGenerator>(Second));
+            mam.getResult<FunctionAbstractionsGenerator>(First,
+                                                         MainFunctions.first),
+            mam.getResult<FunctionAbstractionsGenerator>(Second,
+                                                         MainFunctions.second));
 
     for (auto &FunFirst : First) {
+        if (!(&FunFirst == MainFunctions.first ||
+              callsTransitively(*MainFunctions.first, FunFirst)))
+            continue;
         auto FunSecond = Second.getFunction(FunFirst.getName());
         if (!FunSecond) continue;
+
+        if (!(&*FunSecond == MainFunctions.second||
+              callsTransitively(*MainFunctions.second, *FunSecond)))
+            continue;
 
         if (FunFirst.isDeclaration() || FunSecond->isDeclaration()) {
             if (!FunFirst.isDeclaration())
