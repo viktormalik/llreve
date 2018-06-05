@@ -203,7 +203,9 @@ int main(int argc, const char **argv) {
                                   InferMarksFlag);
     InputOpts inputOpts(IncludesFlag, ResourceDirFlag, FileName1Flag,
                         FileName2Flag);
-    FileOptions fileOpts = getFileOptions(inputOpts.FileNames);
+    FileOptions fileOpts = IrInputFlag
+                           ? FileOptions({}, nullptr, nullptr, false)
+                           : getFileOptions(inputOpts.FileNames);
     SerializeOpts serializeOpts(OutputFileNameFlag, DontInstantiate,
                                 BitVectFlag, true, InlineLets);
 
