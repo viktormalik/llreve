@@ -46,6 +46,8 @@ bool isDebugInfo(const Function &Fun) {
 std::string getStructTypeName(const llvm::StructType *type) {
     std::string name = type->getName();
     name.erase(0, std::string("struct.").length());
+    if (name.find_last_of(".") != std::string::npos)
+        name.erase(name.find_last_of("."));
     return name;
 }
 
