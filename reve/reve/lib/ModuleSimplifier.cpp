@@ -227,17 +227,16 @@ ModuleSimplifier::unifyFunctionAbstractions(
         if (SecondFun == SecondMap.end())
             continue;
 
-        if (FirstFun.second->getName() == SecondFun->second->getName())
-            continue;
-
-        if (!(trySwap(FirstMap, FirstFun.first(),
-                      SecondFun->second->getName()) ||
-              trySwap(SecondMap, SecondFun->first(),
-                      FirstFun.second->getName()))) {
-            FirstFun.second->setName(SecondFun->second->getName());
-        }
-
         coupledFuns.insert({FirstFun.second, SecondFun->second});
+
+        if (FirstFun.second->getName() != SecondFun->second->getName()) {
+            if (!(trySwap(FirstMap, FirstFun.first(),
+                          SecondFun->second->getName()) ||
+                  trySwap(SecondMap, SecondFun->first(),
+                          FirstFun.second->getName()))) {
+                FirstFun.second->setName(SecondFun->second->getName());
+            }
+        }
     }
     return coupledFuns;
 }
