@@ -34,6 +34,7 @@
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
+#include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 
 using std::map;
@@ -128,6 +129,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     fpm.addPass(llvm::SimplifyCFGPass{});
     fpm.addPass(SplitBlockPass{});
     fpm.addPass(NondetRemovalPass{});
+    fpm.addPass(llvm::LowerExpectIntrinsicPass{});
 
     MarkAnalysis markAnalysis{};
     fam.registerPass([] { return InferMarksAnalysis(); });
