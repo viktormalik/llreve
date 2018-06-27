@@ -7,13 +7,14 @@
  * See LICENSE for details.
  */
 
-#include "NondetRemovalPass.h"
+#include "UndefValues.h"
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
+#include <Helper.h>
 
 using namespace llvm;
 
-PreservedAnalyses NondetRemovalPass::run(
+PreservedAnalyses UndefRemovalPass::run(
         Function &Fun, FunctionAnalysisManager &fam) {
     for (auto &BB : Fun) {
         for (auto &Instr : BB) {
@@ -22,20 +23,20 @@ PreservedAnalyses NondetRemovalPass::run(
                     Value *value = PhiNode->getIncomingValue(i);
                     BasicBlock *block = PhiNode->getIncomingBlock(i);
                     if (isa<UndefValue>(value)) {
-                        // Undef values are replaced by call to $nondetX
+                        // Undef values are replaced by call to $undef
                         // functions
                         auto newCall =
-                                replaceNondetByCall(value,
-                                                    block->getTerminator(),
-                                                    Fun.getParent());
+                                replaceUndefByCall(value,
+                                                   block->getTerminator(),
+                                                   Fun.getParent());
                         PhiNode->setIncomingValue(i, newCall);
                     }
                 }
             } else {
                 for (auto &Op : Instr.operands()) {
                     if (isa<UndefValue>(Op)) {
-                        auto newCall = replaceNondetByCall(Op, &Instr,
-                                                           Fun.getParent());
+                        auto newCall = replaceUndefByCall(Op, &Instr,
+                                                          Fun.getParent());
                         Op = newCall;
                     }
                 }
@@ -45,38 +46,50 @@ PreservedAnalyses NondetRemovalPass::run(
     return llvm::PreservedAnalyses();
 }
 
-void NondetRemovalPass::setNondet(Value *Value, LLVMContext &Context) {
+void UndefRemovalPass::setUndef(Value *Value, LLVMContext &Context) {
     MDNode *M = MDNode::get(Context,
                             ConstantAsMetadata::get(
                                     ConstantInt::getTrue(Context)));
     if (auto Instr = dyn_cast<Instruction>(Value))
-        Instr->setMetadata("is_nondet", M);
+        Instr->setMetadata("is_undef", M);
     else if (auto Fun = dyn_cast<Function>(Value))
-        Fun->setMetadata("is_nondet", M);
+        Fun->setMetadata("is_undef", M);
 }
 
 /*
- * Creates a function replacing the 'nondet' value. One function is created for
+ * Creates a function replacing the 'undef' value. One function is created for
  * each type. Later, functions are synchronised between modules based on their
- * suffices (this should be handled in a better way)
+ * suffices
  */
-Value * NondetRemovalPass::replaceNondetByCall(llvm::Value *toReplace,
-                                               llvm::Instruction *insertBefore,
-                                               llvm::Module *mod) {
+Value * UndefRemovalPass::replaceUndefByCall(llvm::Value *toReplace,
+                                             llvm::Instruction *insertBefore,
+                                             llvm::Module *mod) {
     Type *type = toReplace->getType();
-    auto FunMapIt = nondetFunctions.find(type);
-    if (FunMapIt == nondetFunctions.end()) {
+    auto FunMapIt = undefFunctions.find(type);
+    if (FunMapIt == undefFunctions.end()) {
         Function *newFun = Function::Create(
                 FunctionType::get(type, false),
                 Function::LinkageTypes::ExternalLinkage,
-                "$nondet" +
-                std::to_string(nextNondetFun++),
+                "$undef$" + typeName(type),
                 mod);
-        setNondet(newFun, mod->getContext());
-        FunMapIt = nondetFunctions.emplace(
-                type, newFun).first;
+        setUndef(newFun, mod->getContext());
+        FunMapIt = undefFunctions.emplace(type, newFun).first;
     }
     auto newCall = CallInst::Create(FunMapIt->second, {}, "", insertBefore);
-    setNondet(newCall, mod->getContext());
+    setUndef(newCall, mod->getContext());
     return newCall;
+}
+
+std::set<MonoPair<llvm::Function *>> coupleUndefCalls(
+        MonoPair<llvm::Module &> modules) {
+    std::set<MonoPair<llvm::Function *>> result;
+    for (auto &FunFirst : modules.first) {
+        if (FunFirst.getMetadata("is_undef")) {
+            auto *FunSecond = modules.second.getFunction(FunFirst.getName());
+            if (!FunSecond) continue;
+
+            result.emplace(&FunFirst, FunSecond);
+        }
+    }
+    return result;
 }

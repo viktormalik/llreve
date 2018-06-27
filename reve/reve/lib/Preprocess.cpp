@@ -18,7 +18,7 @@
 #include "InstCombine.h"
 #include "Memory.h"
 #include "MonoPair.h"
-#include "NondetRemovalPass.h"
+#include "UndefValues.h"
 #include "PathAnalysis.h"
 #include "RemoveMarkPass.h"
 #include "RemoveMarkRefsPass.h"
@@ -73,6 +73,9 @@ AnalysisResultsMap preprocessModules(MonoPair<llvm::Module &> modules,
     map<const llvm::Function *, PassAnalysisResults> passResults;
     runFunctionPasses(modules.first, opts, passResults, Program::First);
     runFunctionPasses(modules.second, opts, passResults, Program::Second);
+    auto undefCoupled = coupleUndefCalls(modules);
+    SMTGenerationOpts::getInstance().CoupledFunctions.insert(
+            undefCoupled.begin(), undefCoupled.end());
     nameModuleGlobals(modules.first, Program::First);
     nameModuleGlobals(modules.second, Program::Second);
     detectMemoryOptions(modules);
@@ -128,7 +131,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     fpm.addPass(llvm::LoopSimplifyPass{});
     fpm.addPass(llvm::SimplifyCFGPass{});
     fpm.addPass(SplitBlockPass{});
-    fpm.addPass(NondetRemovalPass{});
+    fpm.addPass(UndefRemovalPass{});
     fpm.addPass(llvm::LowerExpectIntrinsicPass{});
 
     MarkAnalysis markAnalysis{};

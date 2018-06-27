@@ -228,7 +228,7 @@ equivalentExternDecls(const llvm::Function &fun1, const llvm::Function &fun2,
         SMTRef eqInputs = equalInputs(fun1, fun2, varArgs);
         SMTRef body = makeOp("=>", std::move(eqInputs), std::move(eqOutputs));
 
-        if (fun1.getMetadata("is_nondet")) {
+        if (fun1.getMetadata("is_undef")) {
             SMTRef eqHeap = equalHeap();
             body = makeOp("and", std::move(body), std::move(eqHeap));
         }
@@ -256,7 +256,7 @@ notEquivalentExternDecls(const llvm::Function &fun1,
                           fun1.getName().str() + "^" + fun2.getName().str(),
                           InvariantAttr::NONE, &varArgs);
         SMTRef body;
-        if (fun1.getMetadata("is_nondet")) {
+        if (fun1.getMetadata("is_undef")) {
             body = equalHeap();
         } else {
             body = make_unique<ConstantBool>(true);
@@ -289,7 +289,7 @@ externFunDecl(const llvm::Function &fun, Program program) {
             invariantName(ENTRY_MARK, asSelection(program), fun.getName().str(),
                           InvariantAttr::NONE, &varArgList);
         SMTRef body;
-        if (fun.getMetadata("is_nondet") &&
+        if (fun.getMetadata("is_undef") &&
             SMTGenerationOpts::getInstance().Heap == HeapOpt::Enabled) {
             body = makeOp("=",
                           memoryVariable("HEAP"),
