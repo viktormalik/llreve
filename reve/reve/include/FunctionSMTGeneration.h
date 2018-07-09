@@ -258,9 +258,34 @@ std::vector<InterleaveStep> matchFunCalls(
     uint64_t i = callInfos1.size(), j = callInfos2.size();
     while (i > 0 && j > 0) {
         if (areCallsCoupled(callInfos1[i - 1], callInfos2[j - 1])) {
-            interleaveSteps.push_back(InterleaveStep::StepBoth);
-            --i;
-            --j;
+            bool stepOver = false;
+            // Try to find another coupled call with a lower distance
+            // in the same column
+            for (uint64_t k = i - 1; k > 0; --k) {
+                if (areCallsCoupled(callInfos1[k - 1], callInfos2[j - 1]) &&
+                    table[k][j] < table[i][j]) {
+                    interleaveSteps.push_back(InterleaveStep::StepFirst);
+                    --i;
+                    stepOver = true;
+                    break;
+                }
+            }
+            // Try to find another coupled call with a lower distance
+            // in the same row
+            for (uint64_t k = j - 1; k > 0; --k) {
+                if (areCallsCoupled(callInfos1[i - 1], callInfos2[k - 1]) &&
+                    table[i][k] < table[i][j]) {
+                    interleaveSteps.push_back(InterleaveStep::StepSecond);
+                    --j;
+                    stepOver = true;
+                    break;
+                }
+            }
+            if (!stepOver) {
+                interleaveSteps.push_back(InterleaveStep::StepBoth);
+                --i;
+                --j;
+            }
         } else {
             if (table[i - 1][j] <= table[i][j - 1]) {
                 interleaveSteps.push_back(InterleaveStep::StepFirst);
