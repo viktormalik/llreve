@@ -628,15 +628,29 @@ SMTRef combineOp(const llvm::BinaryOperator &Op, std::string opName,
 vector<DefOrCallInfo> memcpyIntrinsic(const llvm::CallInst *callInst,
                                       Program prog) {
     vector<DefOrCallInfo> definitions;
+    llvm::PointerType *ty0 = nullptr;
     const auto castInst0 =
         llvm::dyn_cast<llvm::CastInst>(callInst->getArgOperand(0));
+    if (castInst0) {
+        ty0 = llvm::dyn_cast<llvm::PointerType>(castInst0->getSrcTy());
+    } else {
+        if (const auto castOp0 = llvm::dyn_cast<llvm::BitCastOperator>(
+                callInst->getArgOperand(0))) {
+            ty0 = llvm::dyn_cast<llvm::PointerType>(castOp0->getSrcTy());
+        }
+    }
+    llvm::PointerType *ty1 = nullptr;
     const auto castInst1 =
         llvm::dyn_cast<llvm::CastInst>(callInst->getArgOperand(1));
-    if (castInst0 && castInst1) {
-        const auto ty0 =
-            llvm::dyn_cast<llvm::PointerType>(castInst0->getSrcTy());
-        const auto ty1 =
-            llvm::dyn_cast<llvm::PointerType>(castInst1->getSrcTy());
+    if (castInst1) {
+        ty1 = llvm::dyn_cast<llvm::PointerType>(castInst1->getSrcTy());
+    } else {
+        if (const auto castOp1 = llvm::dyn_cast<llvm::BitCastOperator>(
+                callInst->getArgOperand(1))) {
+            ty1 = llvm::dyn_cast<llvm::PointerType>(castOp1->getSrcTy());
+        }
+    }
+    if (ty0 && ty1) {
         const auto StructTy0 =
             llvm::dyn_cast<llvm::StructType>(ty0->getElementType());
         const auto StructTy1 =
