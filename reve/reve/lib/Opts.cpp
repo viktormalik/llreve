@@ -258,8 +258,7 @@ inferCoupledFunctionsByName(MonoPair<llvm::Module &> modules) {
     set<MonoPair<llvm::Function *>> coupledFunctions;
     for (auto &fun1 : modules.first) {
         // These functions are removed before we ever look for couplings
-        if (isLlreveIntrinsic(fun1) || isIntrinsicSupported(fun1) ||
-            isDebugInfo(fun1)) {
+        if (isLlreveIntrinsic(fun1) || isDebugInfo(fun1)) {
             continue;
         }
         llvm::Function *fun2 = modules.second.getFunction(fun1.getName());
@@ -345,10 +344,6 @@ addConstToFunctionPairSet(set<MonoPair<llvm::Function *>> functionPairs) {
 bool isLlreveIntrinsic(const llvm::Function &f) {
     return f.getName() == "__mark" || f.getName() == "__splitmark" ||
            f.getName() == "__criterion" || isHeapAllocation(f);
-}
-
-bool isIntrinsicSupported(const llvm::Function &Fun){
-    return Fun.isIntrinsic() && Fun.getIntrinsicID() == llvm::Intrinsic::memcpy;
 }
 
 bool isHeapAllocation(const llvm::Function &Fun) {

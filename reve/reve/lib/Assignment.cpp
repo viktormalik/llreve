@@ -768,10 +768,17 @@ std::vector<DefOrCallInfo> allocOnHeap(
     return definitions;
 }
 
+bool isBitcast(const llvm::Value *val) {
+    return llvm::isa<llvm::BitCastOperator>(val) ||
+           llvm::isa<llvm::BitCastInst>(val);
+}
+
 std::vector<DefOrCallInfo> processIntrinsic(const llvm::CallInst *callInst,
                                             Program prog) {
     auto fun = callInst->getCalledFunction();
-    if (fun->getIntrinsicID() == llvm::Intrinsic::memcpy)
+    if (fun->getIntrinsicID() == llvm::Intrinsic::memcpy &&
+        isBitcast(callInst->getOperand(0)) &&
+        isBitcast(callInst->getOperand(1)))
         return memcpyIntrinsic(callInst, prog);
 
     if (isHeapAllocation(*fun))

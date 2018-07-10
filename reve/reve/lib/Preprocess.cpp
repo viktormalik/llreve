@@ -93,7 +93,7 @@ void runFunctionPasses(
                 ? SMTGenerationOpts::getInstance().MainFunctions.first
                 : SMTGenerationOpts::getInstance().MainFunctions.second;
     for (auto &f : module) {
-        if (!isLlreveIntrinsic(f) && !isIntrinsicSupported(f)) {
+        if (!isLlreveIntrinsic(f)) {
             if (hasFixedAbstraction(f) ||
                 !(Main == &f || callsTransitively(*Main, f))) {
                 nameFunctionArguments(f, prog);

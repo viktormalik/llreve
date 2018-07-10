@@ -212,7 +212,6 @@ MonoPair<llvm::Function *> findMainFunction(MonoPair<llvm::Module &> modules,
                                             std::string functionName);
 
 bool isLlreveIntrinsic(const llvm::Function &);
-bool isIntrinsicSupported(const llvm::Function &Fun);
 bool isHeapAllocation(const llvm::Function &Fun);
 bool hasMutualFixedAbstraction(MonoPair<const llvm::Function *> functions);
 bool hasFixedAbstraction(const llvm::Function &function);
