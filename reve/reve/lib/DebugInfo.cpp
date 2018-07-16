@@ -97,6 +97,8 @@ void DebugInfo::calculateGEPIndexAlignments() {
                             uint64_t indexFirst = IndexConstant->getZExtValue();
 
                             // Name of the current type (type being indexed)
+                            if (!dyn_cast<StructType>(indexedType)->hasName())
+                                continue;
                             std::string typeName = getStructTypeName(
                                     dyn_cast<StructType>(indexedType));
 
