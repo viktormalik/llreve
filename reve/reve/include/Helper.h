@@ -15,6 +15,7 @@
 #include "SMT.h"
 
 #include <string>
+#include <llvm/IR/Operator.h>
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -31,20 +32,23 @@ template <typename T> std::unique_ptr<smt::SMTExpr> resolveGEP(T &gep) {
     std::vector<smt::SharedSMTRef> args;
     args.push_back(instrNameOrVal(gep.getPointerOperand()));
     const auto type = gep.getSourceElementType();
+    // Try several ways of finding the module
+    const llvm::Module *mod = nullptr;
+    if (auto instr = llvm::dyn_cast<llvm::Instruction>(&gep)) {
+        mod = instr->getModule();
+    }
+    const llvm::Value *Op = gep.getPointerOperand();
+    if (auto Bitcast = llvm::dyn_cast<llvm::BitCastOperator>(Op)) {
+        Op = Bitcast->getOperand(0);
+    }
+    if (auto global = llvm::dyn_cast<llvm::GlobalValue>(Op)) {
+        mod = global->getParent();
+    }
+    if (mod == nullptr) {
+        logErrorData("Couldn’t cast gep to an instruction:\n", gep);
+    }
     std::vector<llvm::Value *> indices;
     for (auto ix = gep.idx_begin(), e = gep.idx_end(); ix != e; ++ix) {
-        // Try several ways of finding the module
-        const llvm::Module *mod = nullptr;
-        if (auto instr = llvm::dyn_cast<llvm::Instruction>(&gep)) {
-            mod = instr->getModule();
-        }
-        if (auto global =
-                llvm::dyn_cast<llvm::GlobalValue>(gep.getPointerOperand())) {
-            mod = global->getParent();
-        }
-        if (mod == nullptr) {
-            logErrorData("Couldn’t cast gep to an instruction:\n", gep);
-        }
         // Check if the index must be aligned with other module (this is stored
         // in metadata)
         llvm::Value *ixVal = *ix;
