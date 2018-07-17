@@ -73,6 +73,17 @@ public:
     }
 };
 
+class DifferentialFunctionComparator : public llvm::FunctionComparator {
+  public:
+    DifferentialFunctionComparator(const llvm::Function *F1,
+                                   const llvm::Function *F2,
+                                   llvm::GlobalNumberState *GN)
+            : llvm::FunctionComparator(F1, F2, GN) {}
+
+  protected:
+    int cmpValues(const llvm::Value *L, const llvm::Value *R) const override;
+};
+
 /*
  * Simplification of modules.
  * Removes bodies of functions that are exactly the same between modules.

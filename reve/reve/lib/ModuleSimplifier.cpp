@@ -191,7 +191,7 @@ std::set<MonoPair<llvm::Function *>> ModuleSimplifier::simplifyModules(
         }
 
         DifferentialGlobalNumberState gs(&First, &Second);
-        llvm::FunctionComparator fComp(&FunFirst, FunSecond, &gs);
+        DifferentialFunctionComparator fComp(&FunFirst, FunSecond, &gs);
         if (fComp.compare() == 0) {
 #ifdef DEBUG
             llvm::errs() << "Function " << FunFirst.getName()
@@ -352,4 +352,14 @@ llvm::PreservedAnalyses RemoveLifetimeCallsPass::run(
     for (auto Instr : toRemove)
         Instr->eraseFromParent();
     return llvm::PreservedAnalyses();
+}
+
+int DifferentialFunctionComparator::cmpValues(const llvm::Value *L,
+                                              const llvm::Value *R) const {
+    const llvm::GEPOperator *GEPL = llvm::dyn_cast<llvm::GEPOperator>(L);
+    const llvm::GEPOperator *GEPR = llvm::dyn_cast<llvm::GEPOperator>(R);
+    if (GEPL && GEPR)
+        return cmpGEPs(GEPL, GEPR);
+    else
+        return llvm::FunctionComparator::cmpValues(L, R);
 }
