@@ -129,7 +129,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     fpm.addPass(InlinePass{});
     fpm.addPass(llvm::PromotePass{});
     fpm.addPass(llvm::LoopSimplifyPass{});
-    fpm.addPass(llvm::SimplifyCFGPass{});
+//    fpm.addPass(llvm::SimplifyCFGPass{});
     fpm.addPass(SplitBlockPass{});
     fpm.addPass(UndefRemovalPass{});
     fpm.addPass(llvm::LowerExpectIntrinsicPass{});
