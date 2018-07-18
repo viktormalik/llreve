@@ -308,20 +308,21 @@ uint64_t DifferentialGlobalNumberState::getNumber(llvm::GlobalValue *value) {
     auto number = GlobalNumbers.find(value);
     u_int64_t result;
     if (number == GlobalNumbers.end()) {
+        // Get new number for the global value
         result = nextNumber;
         GlobalNumbers.insert({value, nextNumber});
 
+        // Try to find global value with the same name in the other module, if
+        // it exists, assign it the same number
         auto otherModule = value->getParent() == First ? Second : First;
-        llvm::GlobalValue *otherValue;
-        otherValue = otherModule->getGlobalVariable(value->getName());
-        if (!otherValue)
-            otherValue = otherModule->getFunction(value->getName());
-
+        llvm::GlobalValue *otherValue = otherModule->getNamedValue(
+                value->getName());
         if (otherValue)
             GlobalNumbers.insert({otherValue, nextNumber});
 
         nextNumber++;
     } else {
+        // If number for the global value exists, return it
         result = number->second;
     }
 
