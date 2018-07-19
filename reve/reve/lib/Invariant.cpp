@@ -140,9 +140,10 @@ SMTRef iterativeCouplingPredicate(Mark EndIndex, vector<SortedVar> FreeVars,
         vector<SharedSMTRef> args = {stringExpr(resultName(Program::First)),
                                      stringExpr(resultName(Program::Second))};
         for (const auto &arg : FreeVars) {
-            // No stack in output
+            // No stack and alloc sites in output
             if (arg.name.compare(0, 5, "STACK") &&
-                arg.name.compare(0, 2, "SP")) {
+                arg.name.compare(0, 2, "SP") &&
+                arg.name.compare(0, 10, "$heap_ptr_")) {
                 args.push_back(typedVariableFromSortedVar(arg));
             }
         }
