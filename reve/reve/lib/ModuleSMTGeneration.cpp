@@ -274,6 +274,10 @@ std::vector<SharedSMTRef> globalDeclarations(const llvm::Module &mod1,
             otherGlobalName = dropSuffixFromName(globalName) + "$2";
 
         if (auto global2 = mod2.getNamedGlobal(otherGlobalName)) {
+            if (global2->isConstant() && global2->hasGlobalUnnamedAddr() &&
+                !global1.hasGlobalUnnamedAddr())
+                // Both constants must have unnamed_addr
+                continue;
             coveredGlobals1.insert(&global1);
             coveredGlobals2.insert(global2);
             // we want the size of string constants not the size of the
