@@ -206,7 +206,9 @@ FreeVarsMap freeVars(PathMap map, vector<smt::SortedVar> funArgs,
         for (const auto &var : it.second) {
             varsVect.push_back(var);
         }
-        freeVarsMapVect[index] = addMemoryArrays(varsVect, prog);
+        varsVect = addMemoryArrays(varsVect, prog);
+        varsVect = addHeapPointers(varsVect, allocSites, prog);
+        freeVarsMapVect[index] = varsVect;
     }
 
     // The input arguments should be in the function argument order so we can’t
