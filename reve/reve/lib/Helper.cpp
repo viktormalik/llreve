@@ -296,7 +296,7 @@ auto calledFunctions(const llvm::Function &f) -> set<const llvm::Function *> {
     for (const auto &bb : f) {
         for (const auto &instr : bb) {
             if (auto call = llvm::dyn_cast<llvm::CallInst>(&instr)) {
-                auto fun = call->getCalledFunction();
+                const llvm::Function *fun = getCalledFunction(call);
                 if (fun)
                     called.insert(fun);
             }
@@ -379,4 +379,15 @@ std::string typeName(const llvm::Type *Type) {
     std::replace(result.begin(), result.end(), ')', '$');
     std::replace(result.begin(), result.end(), ',', '_');
     return result;
+}
+
+const llvm::Function *getCalledFunction(const llvm::CallInst *Call) {
+    const llvm::Function *fun = Call->getCalledFunction();
+    if (!fun) {
+        const llvm::Value *val = Call->getCalledValue();
+        if (auto BitCast = llvm::dyn_cast<llvm::BitCastOperator>(val)) {
+            fun = llvm::dyn_cast<llvm::Function>(BitCast->getOperand(0));
+        }
+    }
+    return fun;
 }

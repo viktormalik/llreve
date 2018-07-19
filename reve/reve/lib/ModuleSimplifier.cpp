@@ -81,7 +81,7 @@ FunctionAbstractionsGenerator::Result FunctionAbstractionsGenerator::run(
         for (auto &BB : Fun) {
             for (auto &Instr : BB) {
                 if (auto CallInstr = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
-                    auto funCalled = CallInstr->getCalledFunction();
+                    auto funCalled = getCalledFunction(CallInstr);
                     if (funCalled) continue;
                     auto CalledType = CallInstr->getCalledValue()->getType();
                     if (!CalledType->isPointerTy()) continue;

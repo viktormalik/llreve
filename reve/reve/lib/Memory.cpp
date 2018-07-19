@@ -8,6 +8,8 @@
 #include "Memory.h"
 #include "Opts.h"
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/Operator.h>
+#include <Helper.h>
 
 using namespace llreve::opts;
 
@@ -21,7 +23,7 @@ AllocationSiteAnalysis::Result AllocationSiteAnalysis::run(
     for (auto &BB : Fun) {
         for (auto &Instr : BB) {
             if (auto CallInst = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
-                if (isHeapAllocation(*CallInst->getCalledFunction())) {
+                if (isHeapAllocation(*getCalledFunction(CallInst))) {
                     auto N = llvm::MDNode::get(
                             Fun.getContext(),
                             llvm::MDString::get(Fun.getContext(),

@@ -50,7 +50,7 @@ vector<DefOrCallInfo> blockAssignments(const llvm::BasicBlock &BB,
         }
         if (!onlyPhis && !llvm::isa<llvm::PHINode>(instr)) {
             if (const auto CallInst = llvm::dyn_cast<llvm::CallInst>(instr)) {
-                const auto fun = CallInst->getCalledFunction();
+                const auto fun = getCalledFunction(CallInst);
                 if (!fun) {
                     logErrorData("Call to undeclared function\n", *CallInst);
                     exit(1);
@@ -707,7 +707,7 @@ unique_ptr<CallInfo> toCallInfo(string assignedTo, Program prog,
     }
     uint32_t i = 0;
     const auto &funTy = *callInst.getFunctionType();
-    const llvm::Function &fun = *callInst.getCalledFunction();
+    const llvm::Function *fun = getCalledFunction(&callInst);
     VarArgs varArgs;
     for (auto &arg : callInst.arg_operands()) {
         args.push_back(instrNameOrVal(arg, arg->getType()));
@@ -720,8 +720,8 @@ unique_ptr<CallInfo> toCallInfo(string assignedTo, Program prog,
             varArgs.argTypes.push_back(arg->getType());
         ++i;
     }
-    return std::make_unique<CallInfo>(assignedTo, fun.getName(), args, varArgs,
-                                      fun);
+    return std::make_unique<CallInfo>(assignedTo, fun->getName(), args, varArgs,
+                                      *fun);
 }
 
 bool isPtrDiff(const llvm::Instruction &instr) {
@@ -775,7 +775,7 @@ bool isBitcast(const llvm::Value *val) {
 
 std::vector<DefOrCallInfo> processIntrinsic(const llvm::CallInst *callInst,
                                             Program prog) {
-    auto fun = callInst->getCalledFunction();
+    auto *fun = getCalledFunction(callInst);
     if (fun->getIntrinsicID() == llvm::Intrinsic::memcpy &&
         isBitcast(callInst->getOperand(0)) &&
         isBitcast(callInst->getOperand(1)))
