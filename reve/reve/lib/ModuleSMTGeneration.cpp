@@ -484,12 +484,26 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
                        [](auto &arg1, auto &arg2) {
                            return argEquality(arg1, arg2);
                        });
-        std::transform(additionalArguments1.begin(), additionalArguments1.end(),
-                       additionalArguments2.begin(),
-                       std::back_inserter(equalInputs),
-                       [](auto &arg1, auto &arg2) {
-                           return makeOp("=", std::move(arg1), std::move(arg2));
-                       });
+        if (additionalArguments1.size() <= additionalArguments2.size()) {
+            std::transform(additionalArguments1.begin(),
+                           additionalArguments1.end(),
+                           additionalArguments2.begin(),
+                           std::back_inserter(equalInputs),
+                           [](auto &arg1, auto &arg2) {
+                               return makeOp("=", std::move(arg1),
+                                             std::move(arg2));
+                           });
+        } else {
+            std::transform(additionalArguments2.begin(),
+                           additionalArguments2.end(),
+                           additionalArguments1.begin(),
+                           std::back_inserter(equalInputs),
+                           [](auto &arg2, auto &arg1) {
+                               return makeOp("=", std::move(arg1),
+                                             std::move(arg2));
+                           });
+        }
+
         if (SMTGenerationOpts::getInstance().BitVect) {
             equalInputs.push_back(makeOp(
                     "HEAP_EQ",
