@@ -82,6 +82,8 @@ class DifferentialFunctionComparator : public llvm::FunctionComparator {
 
   protected:
     int cmpValues(const llvm::Value *L, const llvm::Value *R) const override;
+    int cmpGEPs(const llvm::GEPOperator *GEPL,
+                const llvm::GEPOperator *GEPR) const override;
 };
 
 /*

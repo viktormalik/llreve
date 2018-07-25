@@ -19,14 +19,17 @@
 
 class DebugInfo {
   public:
-    DebugInfo(MonoPair<llvm::Module &> modules) : ModFirst(modules.first),
-                                                  ModSecond(modules.second) {
+    DebugInfo(MonoPair<llvm::Module &> modules,
+              MonoPair<llvm::Function *> mainFuns) : mainFuns(mainFuns),
+                                                     ModFirst(modules.first),
+                                                     ModSecond(modules.second) {
         DebugInfoFirst.processModule(modules.first);
         DebugInfoSecond.processModule(modules.second);
         calculateGEPIndexAlignments();
     };
 
   private:
+    MonoPair<llvm::Function *> mainFuns;
     llvm::Module &ModFirst;
     llvm::Module &ModSecond;
     llvm::DebugInfoFinder DebugInfoFirst;

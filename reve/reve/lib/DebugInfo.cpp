@@ -69,10 +69,8 @@ void DebugInfo::calculateGEPIndexAlignments() {
     if (DebugInfoFirst.type_count() == 0 || DebugInfoSecond.type_count() == 0)
         return;
 
-    auto MainFirst =
-            llreve::opts::SMTGenerationOpts::getInstance().MainFunctions.first;
     for (auto &Fun : ModFirst) {
-        if (&Fun != MainFirst && !callsTransitively(*MainFirst, Fun))
+        if (&Fun != mainFuns.first && !callsTransitively(*mainFuns.first, Fun))
             continue;
 
         for (auto &BB : Fun) {

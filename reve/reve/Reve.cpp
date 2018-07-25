@@ -236,6 +236,7 @@ int main(int argc, const char **argv) {
 
     auto MainFunctions = findMainFunction(moduleRefs, MainFunctionFlag);
 
+    DebugInfo DBInfo(moduleRefs, MainFunctions);
     ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second,
                                    *MainFunctions.first, *MainFunctions.second);
     auto funAbstractions = modSimplifier.simplifyModules(MainFunctions);
@@ -261,7 +262,6 @@ int main(int argc, const char **argv) {
                             funAbstractions),
         functionNumerals, reversedFunctionNumerals);
 
-    DebugInfo DBInfo(moduleRefs);
     const auto analysisResults = preprocessModules(moduleRefs, preprocessOpts);
     printModule(*modules.first, IRFileName1);
     printModule(*modules.second, IRFileName2);
