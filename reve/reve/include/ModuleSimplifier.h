@@ -108,7 +108,7 @@ protected:
     llvm::Function &FirstMain;
     llvm::Function &SecondMain;
 
-    void runIndependentPasses(llvm::Module &Module);
+    void runIndependentPasses(llvm::Module &Module, llvm::Function& Main);
 
     void inlineCalled(llvm::Module &Mod, llvm::Function &Fun);
     void markCalleesAlwaysInline(llvm::Function &Fun);
@@ -130,4 +130,16 @@ class RemoveLifetimeCallsPass
   public:
     llvm::PreservedAnalyses run(llvm::Module &Mod,
                                 llvm::ModuleAnalysisManager &mam);
+};
+
+/*
+ * Pass for removing unused return values and changing the return type to void
+ */
+class RemoveUnusedReturnValuesPass
+        : public llvm::PassInfoMixin<RemoveUnusedReturnValuesPass> {
+  public:
+    llvm::PreservedAnalyses run(llvm::Module &Mod,
+                                llvm::ModuleAnalysisManager &mam,
+                                llvm::Function& Main
+                               );
 };
