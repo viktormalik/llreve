@@ -108,7 +108,7 @@ protected:
     llvm::Function &FirstMain;
     llvm::Function &SecondMain;
 
-    void runIndependentPasses(llvm::Module &Module, llvm::Function& Main);
+    void runIndependentPasses(llvm::Module &Module, llvm::Function &Main);
 
     void inlineCalled(llvm::Module &Mod, llvm::Function &Fun);
     void markCalleesAlwaysInline(llvm::Function &Fun);
@@ -140,6 +140,5 @@ class RemoveUnusedReturnValuesPass
   public:
     llvm::PreservedAnalyses run(llvm::Module &Mod,
                                 llvm::ModuleAnalysisManager &mam,
-                                llvm::Function& Main
-                               );
+                                llvm::Function &Main);
 };
