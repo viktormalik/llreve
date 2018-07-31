@@ -256,10 +256,11 @@ bool ModuleSimplifier::trySwap(FunctionAbstractionsGenerator::FunMap &Map,
     return false;
 }
 
-void ModuleSimplifier::runIndependentPasses(llvm::Module &Module, llvm::Function& Main) {
+void ModuleSimplifier::runIndependentPasses(llvm::Module &Module, llvm::Function &Main) {
     llvm::FunctionPassManager fpm(false);
     llvm::FunctionAnalysisManager fam(false);
-    llvm::PassManager<llvm::Module, llvm::ModuleAnalysisManager, llvm::Function&> mpm;
+    llvm::PassManager<llvm::Module, llvm::ModuleAnalysisManager,
+        llvm::Function &> mpm;
     llvm::ModuleAnalysisManager mam(false);
     llvm::PassBuilder pb;
     pb.registerFunctionAnalyses(fam);
@@ -363,22 +364,33 @@ llvm::PreservedAnalyses RemoveLifetimeCallsPass::run(
 llvm::PreservedAnalyses RemoveUnusedReturnValuesPass::run(
     llvm::Module &Mod,
     llvm::ModuleAnalysisManager &mam,
-    llvm::Function& Main) {
+    llvm::Function &Main) {
     
-    llvm::Attribute::AttrKind badAttributes[] = {llvm::Attribute::AttrKind::ByVal, llvm::Attribute::AttrKind::InAlloca,
-        llvm::Attribute::AttrKind::Nest, llvm::Attribute::AttrKind::NoAlias, llvm::Attribute::AttrKind::NoCapture,
-        llvm::Attribute::AttrKind::NonNull, llvm::Attribute::AttrKind::ReadNone, llvm::Attribute::AttrKind::ReadOnly,
-        llvm::Attribute::AttrKind::SExt, llvm::Attribute::AttrKind::StructRet, llvm::Attribute::AttrKind::ZExt,
-        llvm::Attribute::AttrKind::Dereferenceable, llvm::Attribute::AttrKind::DereferenceableOrNull
+    // These attributes are invalid for void functions
+    llvm::Attribute::AttrKind badAttributes[] = {
+        llvm::Attribute::AttrKind::ByVal, 
+        llvm::Attribute::AttrKind::InAlloca,
+        llvm::Attribute::AttrKind::Nest,
+        llvm::Attribute::AttrKind::NoAlias,
+        llvm::Attribute::AttrKind::NoCapture,
+        llvm::Attribute::AttrKind::NonNull,
+        llvm::Attribute::AttrKind::ReadNone,
+        llvm::Attribute::AttrKind::ReadOnly,
+        llvm::Attribute::AttrKind::SExt,
+        llvm::Attribute::AttrKind::StructRet,
+        llvm::Attribute::AttrKind::ZExt,
+        llvm::Attribute::AttrKind::Dereferenceable,
+        llvm::Attribute::AttrKind::DereferenceableOrNull
     };
     
-    std::vector<llvm::Function*> functionsToDelete; // Old functions ought to be deleted after iteration
+    // Old functions ought to be deleted after iteration
+    std::vector<llvm::Function *> functionsToDelete;
     
     for(llvm::Function &Fun : Mod) {
         if(Fun.getLinkage() != llvm::GlobalValue::LinkageTypes::ExternalLinkage)
             continue;
         
-        if(Fun.getReturnType()->isVoidTy()) 
+        if(Fun.getReturnType()->isVoidTy())
             continue;
         
         if (!callsTransitively(Main, Fun))
@@ -386,82 +398,108 @@ llvm::PreservedAnalyses RemoveUnusedReturnValuesPass::run(
         
         bool can_replace = true;
 #ifdef DEBUG
-        llvm::errs() << "Changing function: "<< Fun.getName() << "to void\n";
+        llvm::errs() << "Changing function: "<< Fun.getName() << " to void\n";
 #endif
         for(llvm::Use &U : Fun.uses()) {
             // Figure out whether the return value is used after each call
             
             if(auto CI = llvm::dyn_cast<llvm::CallInst>(U.getUser())) {
                 if(CI->getCalledFunction() != &Fun)
-                    can_replace = false; // Different function is called, Fun is an argument
+                    // Different function is called, Fun is an argument
+                    can_replace = false; 
 #ifdef DEBUG
                 CI->print(llvm::errs(), false); llvm::errs() << "\n";
                 for(llvm::Use &UU : CI->uses()) {
-                    llvm::errs() << "  "; UU.getUser()->print(llvm::errs(), false); llvm::errs() << "\n";
+                    llvm::errs() << "  "; UU.getUser()->print(llvm::errs(), 
+                                                              false); 
+                    llvm::errs() << "\n";
                 }
 #endif
                 if(!CI->use_empty())
-                    can_replace = false; // The return value is actually used
+                    // The return value is actually used
+                    can_replace = false; 
             } else if(auto II = llvm::dyn_cast<llvm::InvokeInst>(U.getUser())) {
                 if(II->getCalledFunction() != &Fun)
-                    can_replace = false; // Different function is called, Fun is an argument
+                    // Different function is called, Fun is an argument
+                    can_replace = false; 
 #ifdef DEBUG
                 II->print(llvm::errs(), false); llvm::errs() << "\n";
                 for(llvm::Use &UU : II->uses()) {
-                    llvm::errs() << "  "; UU.getUser()->print(llvm::errs(), false); llvm::errs() << "\n";
+                    llvm::errs() << "  "; UU.getUser()->print(llvm::errs(), 
+                                                              false); 
+                    llvm::errs() << "\n";
                 }
 #endif
-                if(!II->use_empty()) // The return value is actually used
+                if(!II->use_empty()) 
+                    // The return value is actually used
                     can_replace = false;
-            } else can_replace = false; // The function is used somewhere as an argument, therefore
-                                        // it ought not to be replaced
+            } else
+                // The function is used somewhere as an argument, therefore
+                // it ought not to be replaced
+                can_replace = false;
         }
-        
+
         if(can_replace) {  
             // Create the header of the new function
-            std::vector<llvm::Type*> FAT_New (Fun.getFunctionType()->param_begin(), Fun.getFunctionType()->param_end());
-            llvm::FunctionType *FT_New = llvm::FunctionType::get(llvm::Type::getVoidTy(Fun.getContext()), FAT_New, Fun.isVarArg());
-            llvm::Function *Fun_New = llvm::Function::Create(FT_New, Fun.getLinkage(), Fun.getName(), Fun.getParent());
+            std::vector<llvm::Type *> FAT_New (
+                Fun.getFunctionType()->param_begin(),
+                Fun.getFunctionType()->param_end());
+            llvm::FunctionType *FT_New = llvm::FunctionType::get(
+                llvm::Type::getVoidTy(Fun.getContext()),
+                FAT_New, Fun.isVarArg());
+            llvm::Function *Fun_New = llvm::Function::Create(FT_New,
+                                                             Fun.getLinkage(),
+                                                             Fun.getName(),
+                                                             Fun.getParent());
             
-            // Copy the attributes from the old function and delete the ones related to the return value
+            // Copy the attributes from the old function and delete the ones 
+            // related to the return value
             Fun_New->copyAttributesFrom(&Fun);
             for(llvm::Attribute::AttrKind AK : badAttributes) {
                 Fun_New->removeAttribute(llvm::AttributeList::ReturnIndex, AK);
-                Fun_New->removeAttribute(llvm::AttributeList::FunctionIndex, AK);
+                Fun_New->removeAttribute(llvm::AttributeList::FunctionIndex, 
+                                         AK);
             }
             Fun_New->takeName(&Fun);
             
-            for(llvm::Function::arg_iterator AI = Fun.arg_begin(), AE = Fun.arg_end(), NAI = Fun_New->arg_begin();
+            // Set the names of all arguments of the new function
+            for(llvm::Function::arg_iterator AI = Fun.arg_begin(), 
+                AE = Fun.arg_end(), NAI = Fun_New->arg_begin();
                 AI != AE; 
-                ++AI, ++NAI)
-            {
-                NAI->takeName(AI); // Set the names of all arguments of the new function
+                ++AI, ++NAI) {
+                NAI->takeName(AI); 
             }
             
-            Fun_New->getBasicBlockList().splice(Fun_New->begin(), Fun.getBasicBlockList()); // Copy the function body
+            // Copy the function body (currently not used, because function with
+            // a body are ignored)
+            Fun_New->getBasicBlockList().splice(Fun_New->begin(),
+                                                Fun.getBasicBlockList());
             
             // Replace return instructions on ends of basic blocks with ret void
+            // (currently not used because function with a body are ignored)
             for(llvm::BasicBlock &B : *Fun_New)
                 if(llvm::dyn_cast<llvm::ReturnInst>(B.getTerminator())) {
                     B.getInstList().pop_back();
-                    llvm::ReturnInst *Term_New = llvm::ReturnInst::Create(B.getContext());
+                    llvm::ReturnInst *Term_New = llvm::ReturnInst::Create(
+                        B.getContext());
                     B.getInstList().push_back(Term_New);
                 }
             
-            for(llvm::Function::arg_iterator I = Fun.arg_begin(), E = Fun.arg_end(), NI = Fun_New->arg_begin();
+            // Replace all uses of the old arguments
+            for(llvm::Function::arg_iterator I = Fun.arg_begin(),
+                E = Fun.arg_end(), NI = Fun_New->arg_begin();
                 I != E;
-                ++I, ++NI)
-            {
-                I->replaceAllUsesWith(NI); // Replace all uses of the old arguments
+                ++I, ++NI) {
+                I->replaceAllUsesWith(NI); 
             }
             
-            // For call or invoke instructions a new instruction has to be created and the old one replaced
+            // For call or invoke instructions a new instruction has to be
+            // created and the old one replaced
             for(llvm::Use &U : Fun.uses()) {
-                llvm::CallInst* CI = llvm::dyn_cast<llvm::CallInst>(U.getUser());
-                llvm::InvokeInst* II = llvm::dyn_cast<llvm::InvokeInst>(U.getUser());
-                
-                if(CI) {
-                    // First copy all arguments to an array and create the new instruction
+                if(llvm::CallInst *CI = 
+                    llvm::dyn_cast<llvm::CallInst>(U.getUser())) {
+                    // First copy all arguments to an array 
+                    // and create the new instruction
                     std::vector<llvm::Value *> Args;
                     
                     for(llvm::Value *A : CI->arg_operands()) {
@@ -470,23 +508,33 @@ llvm::PreservedAnalyses RemoveUnusedReturnValuesPass::run(
                     
                     llvm::ArrayRef<llvm::Value *> Args_AR(Args);
                     
-                    llvm::CallInst *CI_New = llvm::CallInst::Create(Fun_New, Args_AR, "", CI); // Insert the new instruction next to the old one
-                    
+                    // Insert the new instruction next to the old one
+                    llvm::CallInst *CI_New = llvm::CallInst::Create(Fun_New,
+                                                                    Args_AR, 
+                                                                    "", CI);
+                
                     // Copy additional properties
                     CI_New->setAttributes(CI->getAttributes());
-                    for(llvm::Attribute::AttrKind AK : badAttributes) { // Remove incompatibile attributes
-                        CI_New->removeAttribute(llvm::AttributeList::ReturnIndex, AK);
-                        CI_New->removeAttribute(llvm::AttributeList::FunctionIndex, AK);
+                    for(llvm::Attribute::AttrKind AK : badAttributes) { 
+                        // Remove incompatibile attributes
+                        CI_New->removeAttribute(
+                            llvm::AttributeList::ReturnIndex, AK);
+                        CI_New->removeAttribute(
+                            llvm::AttributeList::FunctionIndex, AK);
                     }
                     CI_New->setCallingConv(CI->getCallingConv());
                     if(CI->isTailCall())
                         CI_New->setTailCall();
 #ifdef DEBUG
-                    llvm::errs() << "Replacing :" << *CI << " with " << *CI_New << "\n";
+                    llvm::errs() << "Replacing :" << *CI << " with " << *CI_New;
+                    llvm::errs() << "\n";
 #endif
-                    CI->eraseFromParent(); // Erase the old instruction
-                } else if(II) {
-                    // First copy all arguments to an array and create the new instruction
+                     // Erase the old instruction
+                    CI->eraseFromParent();
+                } else if(llvm::InvokeInst *II = 
+                    llvm::dyn_cast<llvm::InvokeInst>(U.getUser())) {
+                    // First copy all arguments to an array and create 
+                    // the new instruction
                     std::vector<llvm::Value *> Args;
                     
                     for(llvm::Value *A : II->arg_operands()) {
@@ -495,28 +543,43 @@ llvm::PreservedAnalyses RemoveUnusedReturnValuesPass::run(
                     
                     llvm::ArrayRef<llvm::Value *> Args_AR(Args);
                     
-                    llvm::InvokeInst *II_New = llvm::InvokeInst::Create(Fun_New, II->getNormalDest(), 
-                                                            II->getUnwindDest(), Args_AR, "", II); // Insert the new instruction next to the old one
+                    // Insert the new instruction next to the old one
+                    llvm::InvokeInst *II_New = llvm::InvokeInst::Create(
+                                                        Fun_New,
+                                                        II->getNormalDest(),
+                                                        II->getUnwindDest(),
+                                                        Args_AR, "", II);
                     
                     // Copy additional properties
                     II_New->setAttributes(II->getAttributes());
-                    for(llvm::Attribute::AttrKind AK : badAttributes) { // Remove incompatibile attributes
-                        II_New->removeAttribute(llvm::AttributeList::ReturnIndex, AK);
-                        II_New->removeAttribute(llvm::AttributeList::FunctionIndex, AK);
+                    for(llvm::Attribute::AttrKind AK : badAttributes) {
+                        // Remove incompatibile attributes
+                        II_New->removeAttribute(
+                            llvm::AttributeList::ReturnIndex, AK);
+                        II_New->removeAttribute(
+                            llvm::AttributeList::FunctionIndex, AK);
                     }
                     II_New->setCallingConv(II->getCallingConv());
 #ifdef DEBUG
-                    llvm::errs() << "Replacing :" << *II << " with " << *II_New << "\n";
+                    llvm::errs() << "Replacing :" << *II << " with " << *II_New;
+                    llvm::errs() << "\n";
 #endif        
-                    II->eraseFromParent(); // Erase the old instruction
+                    // Erase the old instruction
+                    II->eraseFromParent();
                 }
             }
 #ifdef DEBUG
             Fun_New->print(llvm::errs()); llvm::errs() << "\n";
 #endif
-            functionsToDelete.push_back(&Fun); // Delete function after iteration
+            // Delete function after iteration
+            functionsToDelete.push_back(&Fun);
         }
     }
+    
+    // Delete replaced functions
+    for(llvm::Function *F : functionsToDelete)
+        F->removeFromParent();
+    
     return llvm::PreservedAnalyses();
 }
 
