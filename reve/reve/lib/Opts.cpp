@@ -9,7 +9,6 @@
  */
 
 #include "Opts.h"
-#include "DebugInfo.h"
 #include "Helper.h"
 #include "SMT.h"
 
@@ -242,23 +241,19 @@ MonoPair<std::string> splitFunctionPair(const string &funPair) {
 
 set<MonoPair<llvm::Function *>>
 getCoupledFunctions(MonoPair<llvm::Module &> modules, bool disableAutoCoupling,
-                    std::set<MonoPair<std::string>> coupledFunctionNames,
-                    std::set<MonoPair<llvm::Function *>> &funAbstractions) {
-    set<MonoPair<llvm::Function *>> result;
+                    std::set<MonoPair<std::string>> coupledFunctionNames) {
     if (disableAutoCoupling) {
-        result = lookupFunctionNamePairs(modules, coupledFunctionNames);
+        return lookupFunctionNamePairs(modules, coupledFunctionNames);
     } else {
-        result = inferCoupledFunctionsByName(modules);
+        return inferCoupledFunctionsByName(modules);
     }
-    result.insert(funAbstractions.begin(), funAbstractions.end());
-    return result;
 }
 set<MonoPair<llvm::Function *>>
 inferCoupledFunctionsByName(MonoPair<llvm::Module &> modules) {
     set<MonoPair<llvm::Function *>> coupledFunctions;
     for (auto &fun1 : modules.first) {
         // These functions are removed before we ever look for couplings
-        if (isLlreveIntrinsic(fun1) || isDebugInfo(fun1)) {
+        if (isLlreveIntrinsic(fun1)) {
             continue;
         }
         llvm::Function *fun2 = modules.second.getFunction(fun1.getName());

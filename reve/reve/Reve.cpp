@@ -8,7 +8,6 @@
  * See LICENSE (distributed with this file) for details.
  */
 
-#include <DebugInfo.h>
 #include "Compile.h"
 #include "GitSHA1.h"
 #include "ModuleSMTGeneration.h"
@@ -22,7 +21,6 @@
 
 #include "llvm/Transforms/IPO.h"
 #include "llvm/IRReader/IRReader.h"
-#include "ModuleSimplifier.h"
 
 using clang::CodeGenAction;
 
@@ -236,11 +234,6 @@ int main(int argc, const char **argv) {
 
     auto MainFunctions = findMainFunction(moduleRefs, MainFunctionFlag);
 
-    DebugInfo DBInfo(moduleRefs, MainFunctions);
-    ModuleSimplifier modSimplifier(moduleRefs.first, moduleRefs.second,
-                                   *MainFunctions.first, *MainFunctions.second);
-    auto funAbstractions = modSimplifier.simplifyModules(MainFunctions);
-
     SMTGenerationOpts::initialize(
         MainFunctions,
         HeapFlag ? HeapOpt::Enabled : HeapOpt::Disabled,
@@ -257,9 +250,9 @@ int main(int argc, const char **argv) {
         DisableAutoAbstraction, {}, {}, {},
         addConstToFunctionPairSet(lookupFunctionNamePairs(
             moduleRefs, parseFunctionPairFlags(AssumeEquivalentFlags))),
-        getCoupledFunctions(moduleRefs, DisableAutoCouplingFlag,
-                            parseFunctionPairFlags(CoupleFunctionsFlag),
-                            funAbstractions),
+        getCoupledFunctions(moduleRefs,
+                            DisableAutoCouplingFlag,
+                            parseFunctionPairFlags(CoupleFunctionsFlag)),
         functionNumerals, reversedFunctionNumerals);
 
     const auto analysisResults = preprocessModules(moduleRefs, preprocessOpts);

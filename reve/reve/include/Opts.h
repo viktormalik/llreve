@@ -197,8 +197,7 @@ auto splitFunctionPair(const std::string &funPair)
 // `coupledFunctionNames`
 auto getCoupledFunctions(MonoPair<llvm::Module &> modules,
                          bool disableAutoCoupling,
-                         std::set<MonoPair<std::string>> coupledFunctionNames,
-                         std::set<MonoPair<llvm::Function *>> &funAbstractions)
+                         std::set<MonoPair<std::string>> coupledFunctionNames)
     -> std::set<MonoPair<llvm::Function *>>;
 auto inferCoupledFunctionsByName(MonoPair<llvm::Module &> modules)
     -> std::set<MonoPair<llvm::Function *>>;
