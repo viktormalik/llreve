@@ -476,7 +476,7 @@ std::unique_ptr<FunDef> inInvariant(MonoPair<const llvm::Function *> funs,
             typedVariableFromSortedVar);
 
     if (body == nullptr || additionalIn) {
-        assert(functionArguments1.size() == functionArguments2.size());
+        //assert(functionArguments1.size() == functionArguments2.size());
         vector<SharedSMTRef> equalInputs;
         std::transform(functionArguments1.begin(), functionArguments1.end(),
                        functionArguments2.begin(),

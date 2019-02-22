@@ -23,6 +23,8 @@ AllocationSiteAnalysis::Result AllocationSiteAnalysis::run(
     for (auto &BB : Fun) {
         for (auto &Instr : BB) {
             if (auto CallInst = llvm::dyn_cast<llvm::CallInst>(&Instr)) {
+                if (!getCalledFunction(CallInst))
+                    continue;
                 if (isHeapAllocation(*getCalledFunction(CallInst))) {
                     auto N = llvm::MDNode::get(
                             Fun.getContext(),

@@ -250,7 +250,8 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
         if (SMTGenerationOpts::getInstance().BitVect) {
             llvm::SmallVector<unique_ptr<Assignment>, 1> result;
             // We load single bytes
-            unsigned bytes = loadInst->getType()->getIntegerBitWidth() / 8;
+            unsigned bytes = llvm::isa<llvm::IntegerType>(loadInst->getType()) ?
+                             loadInst->getType()->getIntegerBitWidth() / 8 : 0;
             auto load =
                 makeOp("select", memoryVariable(heapName(progIndex)), pointer);
             for (unsigned i = 1; i < bytes; ++i) {
@@ -305,9 +306,9 @@ instrAssignment(const llvm::Instruction &Instr, const llvm::BasicBlock *prevBb,
         SharedSMTRef pointer = instrNameOrVal(storeInst->getPointerOperand());
         SharedSMTRef val = instrNameOrVal(storeInst->getValueOperand());
         if (SMTGenerationOpts::getInstance().BitVect) {
-            int bytes =
-                storeInst->getValueOperand()->getType()->getIntegerBitWidth() /
-                8;
+            llvm::Type *storeType = storeInst->getValueOperand()->getType();
+            int bytes = llvm::isa<llvm::IntegerType>(storeType) ?
+                        storeType->getIntegerBitWidth() / 8 : 0;
             auto newHeap = memoryVariable(heap);
             for (int i = 0; i < bytes; ++i) {
                 SharedSMTRef offset =

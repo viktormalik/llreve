@@ -111,7 +111,6 @@ static llvm::ReturnInst *getReturnInstruction(llvm::Function &fun) {
             }
         }
     }
-    assert(false);
     return nullptr;
 }
 
