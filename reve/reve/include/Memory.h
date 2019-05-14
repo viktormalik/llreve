@@ -10,13 +10,7 @@
 
 #pragma once
 
-#include <regex>
 #include "llvm/IR/PassManager.h"
-
-const std::regex HEAP_REGEX =
-    std::regex("^(HEAP|STACK)\\$(1|2)(.*?)$", std::regex::ECMAScript);
-const std::regex INDEX_REGEX =
-    std::regex("^i(1|2)(_res|_old|_stack)?$", std::regex::ECMAScript);
 
 /*
  * Analysis of allocation sites of a function. These sites are then synchronised

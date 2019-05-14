@@ -97,9 +97,8 @@ Type llvmType(const llvm::Type *type) {
 }
 
 Type inferTypeByName(string arg) {
-    if (std::regex_match(arg, HEAP_REGEX) ||
-        oneOf(arg, heapResultName(Program::First),
-              heapResultName(Program::Second))) {
+    if (arg.find("HEAP$") != std::string::npos
+        || arg.find("STACK$") != std::string::npos) {
         return memoryType();
     }
     return int64Type();

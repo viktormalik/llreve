@@ -496,14 +496,15 @@ vector<SharedSMTRef> Forall::splitConjunctions() {
 unique_ptr<const HeapInfo> SMTExpr::heapInfo() const { return nullptr; }
 
 unique_ptr<const HeapInfo> TypedVariable::heapInfo() const {
-    std::smatch matchResult;
-    if (std::regex_match(name, matchResult, HEAP_REGEX)) {
-        // The actual match counts too
-        assert(matchResult.size() == 3 || matchResult.size() == 4);
-        return make_unique<HeapInfo>(matchResult[1], matchResult[2],
-                                     matchResult[3]);
-    }
-    return nullptr;
+    auto split = name.find_first_of('$');
+    if (split == std::string::npos)
+        return nullptr;
+    std::string Type = name.substr(0, split);
+    std::string Index = name.substr(split + 1, 1);
+    std::string Suffix = name.substr(split + 2);
+    if (Type != "HEAP" || Type != "STACK" || Index != "1" || Index != "2")
+        return nullptr;
+    return make_unique<HeapInfo>(Type, Index, Suffix);
 }
 
 // Implementations of inlineLets
