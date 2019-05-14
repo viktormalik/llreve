@@ -22,7 +22,8 @@ target_include_directories(libllreve PUBLIC
 
 add_executable(llreve Reve.cpp)
 
-llvm_map_components_to_libnames(llvm_libs
+exec_program(llvm-config
+  ARGS --libs
   bitwriter
   irreader
   linker
@@ -30,7 +31,7 @@ llvm_map_components_to_libnames(llvm_libs
   option
   passes
   x86codegen
-  )
+  OUTPUT_VARIABLE llvm_libs)
 
 if (LLREVE_USE_LIBCXX)
   target_link_libraries(libllreve c++ c++abi)

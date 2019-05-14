@@ -35,7 +35,7 @@ if(${LLREVE_SANITIZE})
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fsanitize=address")
 endif()
 
-find_package(LLVM 5.0 REQUIRED CONFIG)
+find_package(LLVM REQUIRED CONFIG)
 find_package(Clang REQUIRED CONFIG)
 find_package(Threads REQUIRED)
 find_package(BISON REQUIRED)
@@ -55,7 +55,7 @@ endif ()
 
 message(STATUS "use libcxx: ${REVE_USE_LIBCXX}")
 
-find_path(Z3_INCLUDE_DIRS NAMES z3++.h)
+find_path(Z3_INCLUDE_DIRS NAMES z3++.h PATH_SUFFIXES z3)
 find_library(Z3_LIB NAMES z3 libz3)
 include_directories(${LLVM_INCLUDE_DIRS} ${Z3_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
