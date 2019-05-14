@@ -132,6 +132,7 @@ PassAnalysisResults runFunctionPasses(llvm::Function &fun, Program prog,
     fpm.addPass(llvm::LowerExpectIntrinsicPass{});
 
     MarkAnalysis markAnalysis{};
+    fam.registerPass([] { return llvm::LoopAnalysis {}; });
     fam.registerPass([] { return InferMarksAnalysis(); });
     fam.registerPass([] { return MarkAnalysis{}; });
     if (!opts.InferMarks) {
